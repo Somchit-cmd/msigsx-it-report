@@ -43,22 +43,22 @@ const Index = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="p-1.5 sm:p-2  rounded-lg">
-                <img src="assets/msigsx_it_dev.png" alt="MSIGSX IT" className="h-12 w-12 sm:h-16 sm:w-16" />
-              </div>
-              <div>
-                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">IT Performance Dashboard</h1>
-                <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">Monthly reporting system for IT department metrics</p>
-              </div>
-            </div>
-            <div className="text-left sm:text-right">
-              <p className="text-xs sm:text-sm text-gray-600">Current Month</p>
-              <p className="text-sm sm:text-base font-semibold text-gray-900">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
-            </div>
-          </div>
-        </div>
+  <div className="flex flex-row items-center justify-between gap-2">
+    <div className="flex items-center space-x-2 sm:space-x-3">
+      <div className="p-1.5 sm:p-2 rounded-lg">
+        <img src="assets/msigsx_it_dev.png" alt="MSIGSX IT" className="h-12 w-12 sm:h-16 sm:w-16" />
+      </div>
+      <div className="flex flex-col">
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">IT Performance Dashboard</h1>
+        <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">Monthly reporting system for IT department metrics</p>
+      </div>
+    </div>
+    <div className="text-right min-w-[90px]">
+      <p className="text-xs sm:text-sm text-gray-600">Current Month</p>
+      <p className="text-sm sm:text-base font-semibold text-gray-900">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+    </div>
+  </div>
+</div>
       </header>
 
       {/* Main Content */}
@@ -66,30 +66,30 @@ const Index = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
           {/* Mobile: Scrollable tabs, Desktop: Grid */}
           <div className="w-full overflow-x-auto sm:overflow-x-visible">
-            <TabsList className="flex sm:grid w-max sm:w-full sm:grid-cols-6 bg-white shadow-sm min-w-full sm:min-w-0 gap-1 p-1">
-              <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 whitespace-nowrap">
-                <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm tab-label">Overview</span>
+            <TabsList className="flex sm:grid w-full sm:w-full sm:grid-cols-6 bg-white shadow-sm min-w-full sm:min-w-0 gap-2 p-2 py-2">
+              <TabsTrigger value="overview" className={`flex items-center justify-center sm:h-full gap-3 sm:gap-2 px-4 sm:px-3 py-3 sm:py-0 whitespace-nowrap ${activeTab === 'overview' ? 'text-blue-600' : ''}`}>
+                <TrendingUp className={`h-5 w-5 sm:h-4 sm:w-4 ${activeTab === 'overview' ? 'text-blue-600' : ''}`} />
+                <span className={`text-base sm:text-sm tab-label ${activeTab === 'overview' ? 'text-blue-600' : ''}`}>Overview</span>
               </TabsTrigger>
-              <TabsTrigger value="helpdesk" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 whitespace-nowrap">
-                <Headphones className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm tab-label">Helpdesk</span>
+              <TabsTrigger value="helpdesk" className={`flex items-center justify-center sm:h-full gap-3 sm:gap-2 px-4 sm:px-3 py-3 sm:py-0 whitespace-nowrap ${activeTab === 'helpdesk' ? 'text-blue-600' : ''}`}>
+                <Headphones className={`h-5 w-5 sm:h-4 sm:w-4 ${activeTab === 'helpdesk' ? 'text-blue-600' : ''}`} />
+                <span className={`text-base sm:text-sm tab-label ${activeTab === 'helpdesk' ? 'text-blue-600' : ''}`}>Helpdesk</span>
               </TabsTrigger>
-              <TabsTrigger value="uptime" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 whitespace-nowrap">
-                <Server className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm tab-label">Uptime</span>
+              <TabsTrigger value="uptime" className={`flex items-center justify-center sm:h-full gap-3 sm:gap-2 px-4 sm:px-3 py-3 sm:py-0 whitespace-nowrap ${activeTab === 'uptime' ? 'text-blue-600' : ''}`}>
+                <Server className={`h-5 w-5 sm:h-4 sm:w-4 ${activeTab === 'uptime' ? 'text-blue-600' : ''}`} />
+                <span className={`text-base sm:text-sm tab-label ${activeTab === 'uptime' ? 'text-blue-600' : ''}`}>Uptime</span>
               </TabsTrigger>
-              <TabsTrigger value="security" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 whitespace-nowrap">
-                <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm tab-label">Security</span>
+              <TabsTrigger value="security" className={`flex items-center justify-center sm:h-full gap-3 sm:gap-2 px-4 sm:px-3 py-3 sm:py-0 whitespace-nowrap ${activeTab === 'security' ? 'text-blue-600' : ''}`}>
+                <Shield className={`h-5 w-5 sm:h-4 sm:w-4 ${activeTab === 'security' ? 'text-blue-600' : ''}`} />
+                <span className={`text-base sm:text-sm tab-label ${activeTab === 'security' ? 'text-blue-600' : ''}`}>Security</span>
               </TabsTrigger>
-              <TabsTrigger value="assets" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 whitespace-nowrap">
-                <HardDrive className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm tab-label">Assets</span>
+              <TabsTrigger value="assets" className={`flex items-center justify-center sm:h-full gap-3 sm:gap-2 px-4 sm:px-3 py-3 sm:py-0 whitespace-nowrap ${activeTab === 'assets' ? 'text-blue-600' : ''}`}>
+                <HardDrive className={`h-5 w-5 sm:h-4 sm:w-4 ${activeTab === 'assets' ? 'text-blue-600' : ''}`} />
+                <span className={`text-base sm:text-sm tab-label ${activeTab === 'assets' ? 'text-blue-600' : ''}`}>Assets</span>
               </TabsTrigger>
-              <TabsTrigger value="projects" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 whitespace-nowrap">
-                <FolderOpen className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm tab-label">Projects</span>
+              <TabsTrigger value="projects" className={`flex items-center justify-center sm:h-full gap-3 sm:gap-2 px-4 sm:px-3 py-3 sm:py-0 whitespace-nowrap mr-2 rounded-r-xl ${activeTab === 'projects' ? 'text-blue-600' : ''}`}>
+                <FolderOpen className={`h-5 w-5 sm:h-4 sm:w-4 ${activeTab === 'projects' ? 'text-blue-600' : ''}`} />
+                <span className={`text-base sm:text-sm tab-label ${activeTab === 'projects' ? 'text-blue-600' : ''}`}>Projects</span>
               </TabsTrigger>
             </TabsList>
           </div>
