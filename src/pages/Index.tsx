@@ -45,8 +45,8 @@ const Index = () => {
         <div className="mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="p-1.5 sm:p-2 bg-blue-600 rounded-lg">
-                <Monitor className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              <div className="p-1.5 sm:p-2  rounded-lg">
+                <img src="assets/msigsx_it_dev.png" alt="MSIGSX IT" className="h-12 w-12 sm:h-16 sm:w-16" />
               </div>
               <div>
                 <h1 className="text-lg sm:text-2xl font-bold text-gray-900">IT Performance Dashboard</h1>
@@ -69,27 +69,27 @@ const Index = () => {
             <TabsList className="flex sm:grid w-max sm:w-full sm:grid-cols-6 bg-white shadow-sm min-w-full sm:min-w-0 gap-1 p-1">
               <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 whitespace-nowrap">
                 <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm">Overview</span>
+                <span className="text-xs sm:text-sm tab-label">Overview</span>
               </TabsTrigger>
               <TabsTrigger value="helpdesk" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 whitespace-nowrap">
                 <Headphones className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm">Helpdesk</span>
+                <span className="text-xs sm:text-sm tab-label">Helpdesk</span>
               </TabsTrigger>
               <TabsTrigger value="uptime" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 whitespace-nowrap">
                 <Server className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm">Uptime</span>
+                <span className="text-xs sm:text-sm tab-label">Uptime</span>
               </TabsTrigger>
               <TabsTrigger value="security" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 whitespace-nowrap">
                 <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm">Security</span>
+                <span className="text-xs sm:text-sm tab-label">Security</span>
               </TabsTrigger>
               <TabsTrigger value="assets" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 whitespace-nowrap">
                 <HardDrive className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm">Assets</span>
+                <span className="text-xs sm:text-sm tab-label">Assets</span>
               </TabsTrigger>
               <TabsTrigger value="projects" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 whitespace-nowrap">
                 <FolderOpen className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm">Projects</span>
+                <span className="text-xs sm:text-sm tab-label">Projects</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -183,4 +183,21 @@ const Index = () => {
   );
 };
 
-export default Index;
+// Responsive CSS: Hide tab text on mobile
+const tabLabelStyle = `
+  @media (max-width: 767px) {
+    .tab-label {
+      display: none;
+    }
+  }
+`;
+
+export default () => (
+  <>
+    <style>{tabLabelStyle}</style>
+    <Index />
+  </>
+);
+
+// Original default export
+// export default Index;
