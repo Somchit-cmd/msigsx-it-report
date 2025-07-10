@@ -122,57 +122,57 @@ const HelpdeskTracker = () => {
   return (
     <div className="space-y-6">
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Tickets</p>
-                <p className="text-2xl font-bold">{ticketStats.total}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Total Tickets</p>
+                <p className="text-lg sm:text-2xl font-bold">{ticketStats.total}</p>
               </div>
-              <Ticket className="h-8 w-8 text-blue-600" />
+              <Ticket className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 self-end sm:self-auto" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
               <div>
-                <p className="text-sm font-medium text-gray-600">Open</p>
-                <p className="text-2xl font-bold text-red-600">{ticketStats.open}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Open</p>
+                <p className="text-lg sm:text-2xl font-bold text-red-600">{ticketStats.open}</p>
               </div>
-              <AlertCircle className="h-8 w-8 text-red-600" />
+              <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 self-end sm:self-auto" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
               <div>
-                <p className="text-sm font-medium text-gray-600">In Progress</p>
-                <p className="text-2xl font-bold text-yellow-600">{ticketStats.inProgress}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">In Progress</p>
+                <p className="text-lg sm:text-2xl font-bold text-yellow-600">{ticketStats.inProgress}</p>
               </div>
-              <Clock className="h-8 w-8 text-yellow-600" />
+              <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 self-end sm:self-auto" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
               <div>
-                <p className="text-sm font-medium text-gray-600">Resolved</p>
-                <p className="text-2xl font-bold text-green-600">{ticketStats.resolved}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Resolved</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-600">{ticketStats.resolved}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 self-end sm:self-auto" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Add Ticket Button */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Support Tickets</h2>
-        <Button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+        <h2 className="text-lg sm:text-xl font-semibold">Support Tickets</h2>
+        <Button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           New Ticket
         </Button>
@@ -187,7 +187,7 @@ const HelpdeskTracker = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="title">Issue Title</Label>
                   <Input
@@ -234,9 +234,9 @@ const HelpdeskTracker = () => {
                   required
                 />
               </div>
-              <div className="flex gap-2">
-                <Button type="submit">Create Ticket</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button type="submit" className="w-full sm:w-auto">Create Ticket</Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)} className="w-full sm:w-auto">
                   Cancel
                 </Button>
               </div>
@@ -249,29 +249,31 @@ const HelpdeskTracker = () => {
       <div className="space-y-4">
         {tickets.map((ticket) => (
           <Card key={ticket.id}>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 lg:gap-0">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-semibold">{ticket.title}</h3>
-                    <Badge className={getPriorityColor(ticket.priority)}>
-                      {ticket.priority}
-                    </Badge>
-                    <Badge variant="outline">{ticket.category}</Badge>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                    <h3 className="font-semibold text-sm sm:text-base">{ticket.title}</h3>
+                    <div className="flex flex-wrap gap-1 sm:gap-2">
+                      <Badge className={getPriorityColor(ticket.priority)}>
+                        {ticket.priority}
+                      </Badge>
+                      <Badge variant="outline">{ticket.category}</Badge>
+                    </div>
                   </div>
-                  <p className="text-gray-600 mb-3">{ticket.description}</p>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <p className="text-gray-600 mb-3 text-sm">{ticket.description}</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-500">
                     <span>Created: {ticket.createdDate}</span>
                     {ticket.resolvedDate && <span>Resolved: {ticket.resolvedDate}</span>}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 lg:ml-4">
                   <Badge className={getStatusColor(ticket.status)}>
                     {getStatusIcon(ticket.status)}
-                    {ticket.status}
+                    <span className="ml-1">{ticket.status}</span>
                   </Badge>
                   <Select value={ticket.status} onValueChange={(value) => updateTicketStatus(ticket.id, value as any)}>
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger className="w-full sm:w-32">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

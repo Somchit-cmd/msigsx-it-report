@@ -49,17 +49,17 @@ const ReportsOverview = () => {
   return (
     <div className="space-y-6">
       {/* Report Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-0">
         <div>
-          <h2 className="text-2xl font-bold">Monthly IT Performance Report</h2>
-          <p className="text-gray-600">Comprehensive overview of IT department metrics</p>
+          <h2 className="text-xl sm:text-2xl font-bold">Monthly IT Performance Report</h2>
+          <p className="text-sm sm:text-base text-gray-600">Comprehensive overview of IT department metrics</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" className="flex items-center gap-2 w-full sm:w-auto">
             <Calendar className="h-4 w-4" />
             Previous Month
           </Button>
-          <Button className="flex items-center gap-2">
+          <Button className="flex items-center gap-2 w-full sm:w-auto">
             <Download className="h-4 w-4" />
             Export Report
           </Button>
@@ -67,48 +67,48 @@ const ReportsOverview = () => {
       </div>
 
       {/* Key Metrics Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">147</div>
-            <div className="text-sm text-gray-600">Total Tickets</div>
-            <Badge variant="secondary" className="mt-1 bg-green-100 text-green-800">
+          <CardContent className="p-3 sm:p-4 text-center">
+            <div className="text-lg sm:text-2xl font-bold text-blue-600">147</div>
+            <div className="text-xs sm:text-sm text-gray-600">Total Tickets</div>
+            <Badge variant="secondary" className="mt-1 bg-green-100 text-green-800 text-xs">
               +12% vs last month
             </Badge>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">99.8%</div>
-            <div className="text-sm text-gray-600">Avg Uptime</div>
-            <Badge variant="secondary" className="mt-1 bg-green-100 text-green-800">
+          <CardContent className="p-3 sm:p-4 text-center">
+            <div className="text-lg sm:text-2xl font-bold text-green-600">99.8%</div>
+            <div className="text-xs sm:text-sm text-gray-600">Avg Uptime</div>
+            <Badge variant="secondary" className="mt-1 bg-green-100 text-green-800 text-xs">
               +0.2% vs last month
             </Badge>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-orange-600">2</div>
-            <div className="text-sm text-gray-600">Security Incidents</div>
-            <Badge variant="secondary" className="mt-1 bg-yellow-100 text-yellow-800">
+          <CardContent className="p-3 sm:p-4 text-center">
+            <div className="text-lg sm:text-2xl font-bold text-orange-600">2</div>
+            <div className="text-xs sm:text-sm text-gray-600">Security Incidents</div>
+            <Badge variant="secondary" className="mt-1 bg-yellow-100 text-yellow-800 text-xs">
               Same as last month
             </Badge>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-purple-600">5</div>
-            <div className="text-sm text-gray-600">Active Projects</div>
-            <Badge variant="secondary" className="mt-1 bg-blue-100 text-blue-800">
+          <CardContent className="p-3 sm:p-4 text-center">
+            <div className="text-lg sm:text-2xl font-bold text-purple-600">5</div>
+            <div className="text-xs sm:text-sm text-gray-600">Active Projects</div>
+            <Badge variant="secondary" className="mt-1 bg-blue-100 text-blue-800 text-xs">
               +1 vs last month
             </Badge>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-indigo-600">12</div>
-            <div className="text-sm text-gray-600">New Assets</div>
-            <Badge variant="secondary" className="mt-1 bg-green-100 text-green-800">
+          <CardContent className="p-3 sm:p-4 text-center">
+            <div className="text-lg sm:text-2xl font-bold text-indigo-600">12</div>
+            <div className="text-xs sm:text-sm text-gray-600">New Assets</div>
+            <Badge variant="secondary" className="mt-1 bg-green-100 text-green-800 text-xs">
               +3 vs last month
             </Badge>
           </CardContent>
@@ -250,7 +250,7 @@ const ReportsOverview = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold text-green-600 mb-2">✅ Achievements This Month</h4>
               <ul className="space-y-1 text-sm">

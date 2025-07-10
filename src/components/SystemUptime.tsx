@@ -161,52 +161,52 @@ const SystemUptime = () => {
   return (
     <div className="space-y-6">
       {/* Overall Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
               <div>
-                <p className="text-sm font-medium text-gray-600">Overall Uptime</p>
-                <p className="text-2xl font-bold text-green-600">{overallUptime.toFixed(1)}%</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Overall Uptime</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-600">{overallUptime.toFixed(1)}%</p>
               </div>
-              <Activity className="h-8 w-8 text-green-600" />
+              <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 self-end sm:self-auto" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
               <div>
-                <p className="text-sm font-medium text-gray-600">Online Servers</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Online Servers</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-600">
                   {servers.filter(s => s.status === 'Online').length}
                 </p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 self-end sm:self-auto" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Incidents</p>
-                <p className="text-2xl font-bold text-orange-600">{incidents.length}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Total Incidents</p>
+                <p className="text-lg sm:text-2xl font-bold text-orange-600">{incidents.length}</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-orange-600" />
+              <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600 self-end sm:self-auto" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
               <div>
-                <p className="text-sm font-medium text-gray-600">In Maintenance</p>
-                <p className="text-2xl font-bold text-yellow-600">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">In Maintenance</p>
+                <p className="text-lg sm:text-2xl font-bold text-yellow-600">
                   {servers.filter(s => s.status === 'Maintenance').length}
                 </p>
               </div>
-              <Clock className="h-8 w-8 text-yellow-600" />
+              <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 self-end sm:self-auto" />
             </div>
           </CardContent>
         </Card>
@@ -251,9 +251,9 @@ const SystemUptime = () => {
       </Card>
 
       {/* Downtime Incidents */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Downtime Incidents</h2>
-        <Button onClick={() => setShowIncidentForm(!showIncidentForm)} className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+        <h2 className="text-lg sm:text-xl font-semibold">Downtime Incidents</h2>
+        <Button onClick={() => setShowIncidentForm(!showIncidentForm)} className="flex items-center gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           Log Incident
         </Button>
@@ -268,7 +268,7 @@ const SystemUptime = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleIncidentSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="serverName">Server Name</Label>
                   <Input
@@ -294,7 +294,7 @@ const SystemUptime = () => {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startTime">Start Time</Label>
                   <Input
