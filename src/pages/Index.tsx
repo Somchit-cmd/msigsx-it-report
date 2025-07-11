@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import SecurityCompliance from '../components/SecurityCompliance';
 import AssetManagement from '../components/AssetManagement';
 import ProjectProgress from '../components/ProjectProgress';
 import ReportsOverview from '../components/ReportsOverview';
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from '../components/AppSidebar';
 
 interface User {
