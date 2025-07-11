@@ -6,7 +6,8 @@ import {
   Server,
   Shield,
   HardDrive,
-  FolderOpen
+  FolderOpen,
+  Menu
 } from 'lucide-react';
 import {
   Sidebar,

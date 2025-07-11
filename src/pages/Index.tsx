@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -137,6 +136,10 @@ const Index = () => {
             <div className="mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
               <div className="flex flex-row items-center justify-between gap-2">
                 <div className="flex items-center space-x-2 sm:space-x-3">
+                  {/* Mobile menu trigger - always visible on mobile */}
+                  <div className="md:hidden">
+                    <SidebarTrigger />
+                  </div>
                   <div className="p-1.5 sm:p-2 rounded-lg">
                     <img src="assets/msigsx_it_dev.png" alt="MSIGSX IT" className="h-12 w-12 sm:h-16 sm:w-16" />
                   </div>
