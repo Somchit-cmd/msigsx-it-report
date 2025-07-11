@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,8 +13,10 @@ import {
   Clock,
   TrendingUp,
   Server,
-  Headphones
+  Headphones,
+  LogOut
 } from 'lucide-react';
+import LoginPage from '../components/auth/LoginPage';
 import HelpdeskTracker from '../components/HelpdeskTracker';
 import SystemUptime from '../components/SystemUptime';
 import SecurityCompliance from '../components/SecurityCompliance';
@@ -23,8 +24,28 @@ import AssetManagement from '../components/AssetManagement';
 import ProjectProgress from '../components/ProjectProgress';
 import ReportsOverview from '../components/ReportsOverview';
 
+interface User {
+  name: string;
+  email: string;
+}
+
 const Index = () => {
+  const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+
+  const handleLogin = (userData: User) => {
+    setUser(userData);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setActiveTab('overview');
+  };
+
+  // Show login page if user is not authenticated
+  if (!user) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
 
   // Mock data for dashboard overview
   const dashboardStats = {
@@ -43,22 +64,28 @@ const Index = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
-  <div className="flex flex-row items-center justify-between gap-2">
-    <div className="flex items-center space-x-2 sm:space-x-3">
-      <div className="p-1.5 sm:p-2 rounded-lg">
-        <img src="assets/msigsx_it_dev.png" alt="MSIGSX IT" className="h-12 w-12 sm:h-16 sm:w-16" />
-      </div>
-      <div className="flex flex-col">
-        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">IT Performance Dashboard</h1>
-        <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">Monthly reporting system for IT department metrics</p>
-      </div>
-    </div>
-    <div className="text-right min-w-[90px]">
-      <p className="text-xs sm:text-sm text-gray-600">Current Month</p>
-      <p className="text-sm sm:text-base font-semibold text-gray-900">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
-    </div>
-  </div>
-</div>
+          <div className="flex flex-row items-center justify-between gap-2">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="p-1.5 sm:p-2 rounded-lg">
+                <img src="assets/msigsx_it_dev.png" alt="MSIGSX IT" className="h-12 w-12 sm:h-16 sm:w-16" />
+              </div>
+              <div className="flex flex-col">
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">IT Performance Dashboard</h1>
+                <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">Monthly reporting system for IT department metrics</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="text-right min-w-[90px]">
+                <p className="text-xs sm:text-sm text-gray-600">Welcome, {user.name}</p>
+                <p className="text-sm sm:text-base font-semibold text-gray-900">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleLogout} className="flex items-center gap-1">
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            </div>
+          </div>
+        </div>
       </header>
 
       {/* Main Content */}
@@ -159,7 +186,7 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="helpdesk">
-            <HelpdeskTracker />
+            <HelpdeskTracker user={user} />
           </TabsContent>
 
           <TabsContent value="uptime">
@@ -198,6 +225,3 @@ export default () => (
     <Index />
   </>
 );
-
-// Original default export
-// export default Index;
