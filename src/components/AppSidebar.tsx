@@ -7,7 +7,7 @@ import {
   Shield,
   HardDrive,
   FolderOpen,
-  Menu
+  LogOut
 } from 'lucide-react';
 import {
   Sidebar,
@@ -18,13 +18,21 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarHeader,
+  SidebarFooter,
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 
 interface AppSidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  user?: {
+    name: string;
+    email: string;
+  };
+  onLogout?: () => void;
 }
 
 const menuItems = [
@@ -60,20 +68,25 @@ const menuItems = [
   },
 ];
 
-export function AppSidebar({ activeTab, setActiveTab }: AppSidebarProps) {
+export function AppSidebar({ activeTab, setActiveTab, user, onLogout }: AppSidebarProps) {
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
 
   return (
     <Sidebar className="border-r bg-white" collapsible="icon">
-      <div className="p-4 border-b">
-        <div className="flex items-center gap-2">
-          <SidebarTrigger className="h-8 w-8" />
+      <SidebarHeader className="p-4 border-b">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 rounded-lg">
+            <img src="assets/msigsx_it_dev.png" alt="MSIGSX IT" className="h-10 w-10" />
+          </div>
           {!isCollapsed && (
-            <h2 className="text-lg font-semibold text-gray-900">IT Dashboard</h2>
+            <div className="flex flex-col">
+              <h2 className="text-lg font-bold text-gray-900">IT Performance Dashboard</h2>
+              <p className="text-xs text-gray-600">Monthly reporting system for IT department metrics</p>
+            </div>
           )}
         </div>
-      </div>
+      </SidebarHeader>
       
       <SidebarContent>
         <SidebarGroup>
@@ -111,6 +124,42 @@ export function AppSidebar({ activeTab, setActiveTab }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {user && (
+        <SidebarFooter className="p-4 border-t">
+          {!isCollapsed ? (
+            <div className="space-y-3">
+              <div className="text-center">
+                <p className="text-sm text-gray-600">Welcome, {user.name}</p>
+                <p className="text-base font-semibold text-gray-900">
+                  {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onLogout} 
+                className="w-full flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center space-y-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onLogout} 
+                className="w-full p-2"
+                tooltip="Logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }
