@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,21 +8,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
-interface User {
-  name: string;
+interface AuthUser {
+  uid: string;
   email: string;
+  name: string;
 }
 
 interface CreateTicketDialogProps {
-  user: User;
-  onCreateTicket: (ticket: any) => void;
+  user: AuthUser;
+  onCreateTicket: (ticket: any) => Promise<void>;
 }
 
 const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) => {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     itStaffName: user.name,
+    itStaffEmail: user.email,
     issueCategory: '',
     specificIssue: '',
     resolutionAction: '',
@@ -56,43 +58,45 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
     'High'
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    const newTicket = {
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      itStaffName: formData.itStaffName,
-      issueCategory: formData.issueCategory,
-      specificIssue: formData.specificIssue,
-      resolutionAction: formData.resolutionAction,
-      timeSpent: parseInt(formData.timeSpent) || 0,
-      ticketStatus: formData.ticketStatus,
-      employeeDepartment: formData.employeeDepartment,
-      priority: formData.priority,
-      createdAt: new Date().toLocaleDateString(),
-      createdTime: new Date().toLocaleTimeString(),
-    };
+    try {
+      const newTicket = {
+        date: new Date().toISOString(),
+        itStaffName: formData.itStaffName,
+        itStaffEmail: formData.itStaffEmail,
+        issueCategory: formData.issueCategory,
+        specificIssue: formData.specificIssue,
+        resolutionAction: formData.resolutionAction,
+        timeSpent: parseInt(formData.timeSpent) || 0,
+        ticketStatus: formData.ticketStatus as 'Opened' | 'Resolved' | 'Pending',
+        employeeDepartment: formData.employeeDepartment,
+        priority: formData.priority as 'Low' | 'Medium' | 'High',
+      };
 
-    onCreateTicket(newTicket);
-    
-    // Reset form
-    setFormData({
-      itStaffName: user.name,
-      issueCategory: '',
-      specificIssue: '',
-      resolutionAction: '',
-      timeSpent: '',
-      ticketStatus: 'Opened',
-      employeeDepartment: '',
-      priority: 'Medium',
-    });
-    
-    setOpen(false);
-    toast({
-      title: "Ticket Created",
-      description: "Work ticket has been successfully logged.",
-    });
+      await onCreateTicket(newTicket);
+      
+      // Reset form
+      setFormData({
+        itStaffName: user.name,
+        itStaffEmail: user.email,
+        issueCategory: '',
+        specificIssue: '',
+        resolutionAction: '',
+        timeSpent: '',
+        ticketStatus: 'Opened',
+        employeeDepartment: '',
+        priority: 'Medium',
+      });
+      
+      setOpen(false);
+    } catch (error) {
+      console.error('Error creating ticket:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -235,8 +239,8 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 pt-4">
-            <Button type="submit" className="w-full sm:w-auto">
-              Create Ticket
+            <Button type="submit" className="w-full sm:w-auto" disabled={loading}>
+              {loading ? 'Creating...' : 'Create Ticket'}
             </Button>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">
               Cancel

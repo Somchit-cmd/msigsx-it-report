@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,28 +10,27 @@ import ProjectProgress from '../components/ProjectProgress';
 import ReportsOverview from '../components/ReportsOverview';
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from '../components/AppSidebar';
-
-interface User {
-  name: string;
-  email: string;
-}
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 
 const Index = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, loading, login, logout } = useFirebaseAuth();
   const [activeTab, setActiveTab] = useState('overview');
 
-  const handleLogin = (userData: User) => {
-    setUser(userData);
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    setActiveTab('overview');
-  };
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show login page if user is not authenticated
   if (!user) {
-    return <LoginPage onLogin={handleLogin} />;
+    return <LoginPage onLogin={login} loading={loading} />;
   }
 
   // Mock data for dashboard overview
@@ -131,7 +129,7 @@ const Index = () => {
           activeTab={activeTab} 
           setActiveTab={setActiveTab}
           user={user}
-          onLogout={handleLogout}
+          onLogout={logout}
         />
         
         <main className="flex-1 flex flex-col">

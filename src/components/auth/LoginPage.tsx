@@ -4,32 +4,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from 'lucide-react';
 
 interface LoginPageProps {
-  onLogin: (userData: { name: string; email: string }) => void;
+  onLogin: (email: string, password: string) => Promise<void>;
+  loading: boolean;
 }
 
-const LoginPage = ({ onLogin }: LoginPageProps) => {
-  const { toast } = useToast();
+const LoginPage = ({ onLogin, loading }: LoginPageProps) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.email && formData.password) {
-      // Simple mock authentication - in real app, this would validate against a backend
-      const userData = {
-        name: formData.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        email: formData.email,
-      };
-      onLogin(userData);
-      toast({
-        title: "Login Successful",
-        description: "Welcome to the IT Performance Dashboard.",
-      });
+      await onLogin(formData.email, formData.password);
     }
   };
 
@@ -56,6 +47,7 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                 placeholder="your.email@company.com"
                 required
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -67,10 +59,18 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                 placeholder="Enter your password"
                 required
+                disabled={loading}
               />
             </div>
-            <Button type="submit" className="w-full">
-              Sign In
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing In...
+                </>
+              ) : (
+                'Sign In'
+              )}
             </Button>
           </form>
         </CardContent>

@@ -1,81 +1,70 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Ticket, Clock, CheckCircle, AlertCircle, User, Calendar, Timer } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import CreateTicketDialog from './tickets/CreateTicketDialog';
+import { helpdeskService, WorkTicket } from '@/services/helpdeskService';
+import { Timestamp } from 'firebase/firestore';
 
-interface WorkTicket {
-  id: string;
-  date: string;
-  itStaffName: string;
-  issueCategory: string;
-  specificIssue: string;
-  resolutionAction: string;
-  timeSpent: number;
-  ticketStatus: 'Opened' | 'Resolved' | 'Pending';
-  employeeDepartment: string;
-  priority: 'Low' | 'Medium' | 'High';
-  createdAt: string;
-  createdTime: string;
-}
-
-interface User {
-  name: string;
+interface AuthUser {
+  uid: string;
   email: string;
+  name: string;
 }
 
 interface HelpdeskTrackerProps {
-  user: User;
+  user: AuthUser;
 }
 
 const HelpdeskTracker = ({ user }: HelpdeskTrackerProps) => {
   const { toast } = useToast();
-  const [tickets, setTickets] = useState<WorkTicket[]>([
-    {
-      id: '1',
-      date: new Date().toISOString(),
-      itStaffName: 'John Smith',
-      issueCategory: 'Hardware',
-      specificIssue: 'Replaced faulty RAM in Finance workstation',
-      resolutionAction: 'Diagnosed memory issues, replaced 8GB RAM module, tested system stability',
-      timeSpent: 45,
-      ticketStatus: 'Resolved',
-      employeeDepartment: 'Finance Department',
-      priority: 'Medium',
-      createdAt: '2024-07-08',
-      createdTime: '10:30 AM',
-    },
-    {
-      id: '2',
-      date: new Date().toISOString(),
-      itStaffName: 'Sarah Johnson',
-      issueCategory: 'Network',
-      specificIssue: 'Internet connectivity issues in Conference Room B',
-      resolutionAction: 'Reset network switch, updated network drivers on conference PC',
-      timeSpent: 30,
-      ticketStatus: 'Resolved',
-      employeeDepartment: 'Conference Room B',
-      priority: 'High',
-      createdAt: '2024-07-08',
-      createdTime: '2:15 PM',
-    },
-  ]);
+  const [tickets, setTickets] = useState<WorkTicket[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleCreateTicket = (newTicket: WorkTicket) => {
-    setTickets([newTicket, ...tickets]);
+  useEffect(() => {
+    // Subscribe to real-time ticket updates
+    const unsubscribe = helpdeskService.subscribeToTickets((updatedTickets) => {
+      setTickets(updatedTickets);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleCreateTicket = async (newTicketData: Omit<WorkTicket, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      await helpdeskService.createTicket(newTicketData);
+      toast({
+        title: "Ticket Created",
+        description: "Work ticket has been successfully logged.",
+      });
+    } catch (error) {
+      console.error('Error creating ticket:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create ticket. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const updateTicketStatus = (id: string, status: WorkTicket['ticketStatus']) => {
-    setTickets(tickets.map(ticket => 
-      ticket.id === id ? { ...ticket, ticketStatus: status } : ticket
-    ));
-    toast({
-      title: "Status Updated",
-      description: `Ticket status changed to ${status}.`,
-    });
+  const updateTicketStatus = async (id: string, status: WorkTicket['ticketStatus']) => {
+    try {
+      await helpdeskService.updateTicketStatus(id, status);
+      toast({
+        title: "Status Updated",
+        description: `Ticket status changed to ${status}.`,
+      });
+    } catch (error) {
+      console.error('Error updating ticket status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update ticket status. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -112,6 +101,23 @@ const HelpdeskTracker = ({ user }: HelpdeskTrackerProps) => {
     resolved: tickets.filter(t => t.ticketStatus === 'Resolved').length,
     totalTimeSpent: tickets.reduce((sum, ticket) => sum + ticket.timeSpent, 0),
   };
+
+  const formatDate = (timestamp: Timestamp) => {
+    return timestamp.toDate().toLocaleDateString();
+  };
+
+  const formatTime = (timestamp: Timestamp) => {
+    return timestamp.toDate().toLocaleTimeString();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-2">Loading tickets...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -186,69 +192,77 @@ const HelpdeskTracker = ({ user }: HelpdeskTrackerProps) => {
 
       {/* Tickets List */}
       <div className="space-y-4">
-        {tickets.map((ticket) => (
-          <Card key={ticket.id}>
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 lg:gap-0">
-                <div className="flex-1">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
-                    <h3 className="font-semibold text-sm sm:text-base">{ticket.specificIssue}</h3>
-                    <div className="flex flex-wrap gap-1 sm:gap-2">
-                      <Badge className={getPriorityColor(ticket.priority)}>
-                        {ticket.priority}
-                      </Badge>
-                      <Badge variant="outline">{ticket.issueCategory}</Badge>
+        {tickets.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-gray-500">No tickets found. Create your first ticket!</p>
+            </CardContent>
+          </Card>
+        ) : (
+          tickets.map((ticket) => (
+            <Card key={ticket.id}>
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 lg:gap-0">
+                  <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+                      <h3 className="font-semibold text-sm sm:text-base">{ticket.specificIssue}</h3>
+                      <div className="flex flex-wrap gap-1 sm:gap-2">
+                        <Badge className={getPriorityColor(ticket.priority)}>
+                          {ticket.priority}
+                        </Badge>
+                        <Badge variant="outline">{ticket.issueCategory}</Badge>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 mb-3">
+                      <p className="text-sm text-gray-600">
+                        <strong>Resolution:</strong> {ticket.resolutionAction}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <strong>Affected:</strong> {ticket.employeeDepartment}
+                      </p>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        {ticket.itStaffName}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {formatDate(ticket.createdAt)} {formatTime(ticket.createdAt)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Timer className="h-3 w-3" />
+                        {ticket.timeSpent} minutes
+                      </span>
                     </div>
                   </div>
                   
-                  <div className="space-y-2 mb-3">
-                    <p className="text-sm text-gray-600">
-                      <strong>Resolution:</strong> {ticket.resolutionAction}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <strong>Affected:</strong> {ticket.employeeDepartment}
-                    </p>
-                  </div>
-                  
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      {ticket.itStaffName}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {ticket.createdAt} {ticket.createdTime}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Timer className="h-3 w-3" />
-                      {ticket.timeSpent} minutes
-                    </span>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 lg:ml-4">
+                    <Badge className={getStatusColor(ticket.ticketStatus)}>
+                      {getStatusIcon(ticket.ticketStatus)}
+                      <span className="ml-1">{ticket.ticketStatus}</span>
+                    </Badge>
+                    <Select 
+                      value={ticket.ticketStatus} 
+                      onValueChange={(value) => updateTicketStatus(ticket.id!, value as any)}
+                    >
+                      <SelectTrigger className="w-full sm:w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Opened">Opened</SelectItem>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Resolved">Resolved</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 lg:ml-4">
-                  <Badge className={getStatusColor(ticket.ticketStatus)}>
-                    {getStatusIcon(ticket.ticketStatus)}
-                    <span className="ml-1">{ticket.ticketStatus}</span>
-                  </Badge>
-                  <Select 
-                    value={ticket.ticketStatus} 
-                    onValueChange={(value) => updateTicketStatus(ticket.id, value as any)}
-                  >
-                    <SelectTrigger className="w-full sm:w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Opened">Opened</SelectItem>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Resolved">Resolved</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   );
