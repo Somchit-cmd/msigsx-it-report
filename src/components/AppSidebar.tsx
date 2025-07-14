@@ -82,7 +82,7 @@ export function AppSidebar({ activeTab, setActiveTab, user, onLogout }: AppSideb
           </div>
           {!isCollapsed && (
             <div className="flex flex-col min-w-0">
-              <h2 className="text-xl font-bold text-gray-900 truncate">IT Performance Dashboard</h2>
+              <h2 className="text-l font-bold text-gray-900 truncate">IT Performance Dashboard</h2>
               <p className="text-sm text-gray-600 leading-tight">Monthly reporting system for IT department metrics</p>
             </div>
           )}
@@ -144,7 +144,7 @@ export function AppSidebar({ activeTab, setActiveTab, user, onLogout }: AppSideb
                 className="w-full flex items-center gap-2 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
               >
                 <LogOut className="h-4 w-4" />
-                Logout
+                Log Out
               </Button>
             </div>
           ) : (
@@ -161,7 +161,7 @@ export function AppSidebar({ activeTab, setActiveTab, user, onLogout }: AppSideb
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Logout</p>
+                  <p>Log Out</p>
                 </TooltipContent>
               </Tooltip>
             </div>

@@ -1,12 +1,13 @@
 
 import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  updateDoc, 
-  doc, 
-  query, 
-  orderBy, 
+  collection,
+  addDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+  orderBy,
   onSnapshot,
   Timestamp 
 } from 'firebase/firestore';
@@ -22,7 +23,10 @@ export interface WorkTicket {
   resolutionAction: string;
   timeSpent: number;
   ticketStatus: 'Opened' | 'Resolved' | 'Pending';
-  employeeDepartment: string;
+  department: string;
+  employeeName: string;
+  /** @deprecated */
+  employeeDepartment?: string;
   priority: 'Low' | 'Medium' | 'High';
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -73,6 +77,31 @@ export const helpdeskService = {
       });
     } catch (error) {
       console.error('Error updating ticket status:', error);
+      throw error;
+    }
+  },
+
+  // Edit/update full ticket details
+  async updateTicket(ticketId: string, updatedFields: Partial<Omit<WorkTicket, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> {
+    try {
+      const ticketRef = doc(db, TICKETS_COLLECTION, ticketId);
+      await updateDoc(ticketRef, {
+        ...updatedFields,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Error updating ticket:', error);
+      throw error;
+    }
+  },
+
+  // Delete ticket
+  async deleteTicket(ticketId: string): Promise<void> {
+    try {
+      const ticketRef = doc(db, TICKETS_COLLECTION, ticketId);
+      await deleteDoc(ticketRef);
+    } catch (error) {
+      console.error('Error deleting ticket:', error);
       throw error;
     }
   },

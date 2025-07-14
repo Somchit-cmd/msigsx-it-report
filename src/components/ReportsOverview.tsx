@@ -1,5 +1,8 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { collection, getDocs, Timestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { getWeeksInMonth, getWeekOfMonth, startOfMonth, addDays, format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,13 +10,78 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { FileText, Download, TrendingUp, Calendar } from 'lucide-react';
 
 const ReportsOverview = () => {
-  // Mock data for charts
-  const ticketData = [
-    { name: 'Week 1', open: 12, resolved: 15, pending: 3 },
-    { name: 'Week 2', open: 18, resolved: 16, pending: 5 },
-    { name: 'Week 3', open: 15, resolved: 20, pending: 2 },
-    { name: 'Week 4', open: 20, resolved: 18, pending: 4 },
-  ];
+  // State for Firestore-powered weekly ticket data
+  const [ticketData, setTicketData] = useState([]);
+
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'helpdesk_tickets'));
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        // Custom week range calculation: Week 1 starts on the 1st, then each week starts on Monday, ends on Sunday or last day of month
+        const firstDayOfMonth = startOfMonth(now);
+        const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const weekRanges = [];
+        let weekStart = firstDayOfMonth;
+        while (weekStart <= lastDayOfMonth) {
+          let weekEnd;
+          // If weekStart is not Monday, end this week on the first Sunday or last day of month
+          if (weekRanges.length === 0 && weekStart.getDay() !== 1) {
+            weekEnd = addDays(weekStart, 7 - weekStart.getDay()); // End on Sunday
+          } else {
+            weekEnd = addDays(weekStart, 6);
+          }
+          if (weekEnd > lastDayOfMonth) weekEnd = lastDayOfMonth;
+          weekRanges.push({ start: weekStart, end: weekEnd });
+          weekStart = addDays(weekEnd, 1);
+        }
+        const weekly = Array.from({ length: weekRanges.length }, () => ({ open: 0, resolved: 0, pending: 0 }));
+
+        // Aggregate tickets by real calendar week
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          let ticketDate = data.date;
+          if (ticketDate && ticketDate.seconds) {
+            ticketDate = new Date(ticketDate.seconds * 1000);
+          } else if (typeof ticketDate === 'string') {
+            ticketDate = new Date(ticketDate);
+          } else {
+            ticketDate = null;
+          }
+          // Normalize ticketDate to local midnight for comparison
+          if (ticketDate) {
+            ticketDate = new Date(ticketDate.getFullYear(), ticketDate.getMonth(), ticketDate.getDate(), ticketDate.getHours(), ticketDate.getMinutes(), ticketDate.getSeconds(), ticketDate.getMilliseconds());
+          }
+          console.log('[DEBUG] Ticket:', data);
+          console.log('[DEBUG] Parsed date:', ticketDate);
+          let assignedWeek = null;
+          if (ticketDate && ticketDate.getMonth() === month && ticketDate.getFullYear() === year) {
+            // Find the week index this ticket falls into
+            const weekIdx = weekRanges.findIndex(({ start, end }) => ticketDate >= start && ticketDate <= end);
+            assignedWeek = weekIdx + 1;
+            if (weekIdx >= 0) {
+              if (data.ticketStatus === 'Opened') weekly[weekIdx].open++;
+              else if (data.ticketStatus === 'Resolved') weekly[weekIdx].resolved++;
+              else if (data.ticketStatus === 'Pending') weekly[weekIdx].pending++;
+            }
+          }
+          console.log('[DEBUG] Assigned week:', assignedWeek);
+        });
+        setTicketData(
+          weekly.map((w, i) => ({
+            name: `Week ${i + 1}`,
+            rangeLabel: `${format(weekRanges[i].start, 'd MMM')} - ${format(weekRanges[i].end, 'd MMM')}`,
+            ...w
+          }))
+        );
+      } catch (err) {
+        console.error('Failed to fetch tickets:', err);
+      }
+    };
+    fetchTickets();
+  }, []);
 
   const uptimeData = [
     { name: 'Mail Server', uptime: 99.8 },
@@ -129,14 +197,29 @@ const ReportsOverview = () => {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={ticketData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="open" fill="#3b82f6" name="Opened" />
-                <Bar dataKey="resolved" fill="#22c55e" name="Resolved" />
-                <Bar dataKey="pending" fill="#f59e0b" name="Pending" />
-              </BarChart>
+  <CartesianGrid strokeDasharray="3 3" />
+  <XAxis dataKey="name" />
+  <YAxis />
+  <Tooltip
+    content={({ active, payload, label }) => {
+      if (active && payload && payload.length) {
+        const d = payload[0].payload;
+        return (
+          <div style={{ background: 'white', border: '1px solid #ccc', padding: 10 }}>
+            <div style={{ fontWeight: 600 }}>{d.name} ({d.rangeLabel})</div>
+            <div style={{ color: '#3b82f6' }}>Opened : {d.open}</div>
+            <div style={{ color: '#22c55e' }}>Resolved : {d.resolved}</div>
+            <div style={{ color: '#f59e0b' }}>Pending : {d.pending}</div>
+          </div>
+        );
+      }
+      return null;
+    }}
+  />
+  <Bar dataKey="open" fill="#3b82f6" name="Opened" />
+  <Bar dataKey="resolved" fill="#22c55e" name="Resolved" />
+  <Bar dataKey="pending" fill="#f59e0b" name="Pending" />
+</BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>

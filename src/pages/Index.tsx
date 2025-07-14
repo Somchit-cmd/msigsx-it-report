@@ -141,7 +141,7 @@ const Index = () => {
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 p-6 lg:p-8 xl:p-12 max-w-7xl mx-auto w-full">
+          <div className="flex-1 p-6 lg:p-8 xl:p-10 max-w-10xl mx-auto w-full">
             {renderContent()}
           </div>
         </main>

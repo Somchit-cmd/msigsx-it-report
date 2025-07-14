@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React from "react";
 import {
   Table,
   TableBody,
@@ -10,32 +9,82 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, FileSpreadsheet } from 'lucide-react';
-import { WorkTicket } from '@/services/helpdeskService';
-import { Timestamp } from 'firebase/firestore';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Download, FileSpreadsheet, Trash2 } from "lucide-react";
+import { WorkTicket } from "@/services/helpdeskService";
+import { Timestamp } from "firebase/firestore";
+import EditTicketDialog from "./EditTicketDialog";
 
 interface TicketsTableProps {
   tickets: WorkTicket[];
-  onUpdateStatus: (id: string, status: WorkTicket['ticketStatus']) => void;
+  onUpdateStatus: (id: string, status: WorkTicket["ticketStatus"]) => void;
+  onEditTicket: (
+    id: string,
+    updated: Partial<Omit<WorkTicket, "id" | "createdAt" | "updatedAt">>
+  ) => Promise<void>;
+  onDeleteTicket: (id: string) => Promise<void>;
 }
 
-const TicketsTable = ({ tickets, onUpdateStatus }: TicketsTableProps) => {
+import ConfirmDialog from "./ConfirmDialog";
+
+const TicketsTable = ({
+  tickets,
+  onUpdateStatus,
+  onEditTicket,
+  onDeleteTicket,
+}: TicketsTableProps) => {
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [selectedTicketId, setSelectedTicketId] = React.useState<string | null>(
+    null
+  );
+
+  const handleDeleteClick = (ticketId: string) => {
+    setSelectedTicketId(ticketId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (selectedTicketId) {
+      onDeleteTicket(selectedTicketId);
+    }
+    setDeleteDialogOpen(false);
+    setSelectedTicketId(null);
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setSelectedTicketId(null);
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'High': return 'bg-red-500 text-white';
-      case 'Medium': return 'bg-blue-500 text-white';
-      case 'Low': return 'bg-green-500 text-white';
-      default: return 'bg-gray-500 text-white';
+      case "High":
+        return "bg-red-500 text-white";
+      case "Medium":
+        return "bg-blue-500 text-white";
+      case "Low":
+        return "bg-green-500 text-white";
+      default:
+        return "bg-gray-500 text-white";
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Opened': return 'bg-red-100 text-red-800';
-      case 'Pending': return 'bg-yellow-100 text-yellow-800';
-      case 'Resolved': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "Opened":
+        return "bg-red-100 text-red-800";
+      case "Pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "Resolved":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -49,19 +98,20 @@ const TicketsTable = ({ tickets, onUpdateStatus }: TicketsTableProps) => {
 
   const exportToCSV = () => {
     const headers = [
-      'Date',
-      'IT Staff',
-      'Issue Category',
-      'Specific Issue',
-      'Resolution Action',
-      'Time Spent (min)',
-      'Status',
-      'Department',
-      'Priority',
-      'Created At'
+      "Date",
+      "IT Staff",
+      "Issue Category",
+      "Specific Issue",
+      "Resolution Action",
+      "Time Spent (min)",
+      "Status",
+      "Department",
+      "Employee Name",
+      "Priority",
+      "Created At",
     ];
 
-    const csvData = tickets.map(ticket => [
+    const csvData = tickets.map((ticket) => [
       ticket.date,
       ticket.itStaffName,
       ticket.issueCategory,
@@ -69,22 +119,28 @@ const TicketsTable = ({ tickets, onUpdateStatus }: TicketsTableProps) => {
       ticket.resolutionAction,
       ticket.timeSpent,
       ticket.ticketStatus,
-      ticket.employeeDepartment,
+      ticket.department,
+      ticket.employeeName,
       ticket.priority,
-      `${formatDate(ticket.createdAt)} ${formatTime(ticket.createdAt)}`
+      `${formatDate(ticket.createdAt)} ${formatTime(ticket.createdAt)}`,
     ]);
 
     const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
+      headers.join(","),
+      ...csvData.map((row) =>
+        row.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(",")
+      ),
+    ].join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `helpdesk-tickets-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `helpdesk-tickets-${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -93,24 +149,24 @@ const TicketsTable = ({ tickets, onUpdateStatus }: TicketsTableProps) => {
   const exportToExcel = () => {
     // For Excel export, we'll create a more detailed CSV that Excel can handle
     const headers = [
-      'Ticket ID',
-      'Date',
-      'IT Staff Name',
-      'IT Staff Email',
-      'Issue Category',
-      'Specific Issue',
-      'Resolution Action',
-      'Time Spent (minutes)',
-      'Status',
-      'Employee Department',
-      'Priority',
-      'Created Date',
-      'Created Time',
-      'Last Updated'
+      "Ticket ID",
+      "Date",
+      "IT Staff Name",
+      "IT Staff Email",
+      "Issue Category",
+      "Specific Issue",
+      "Resolution Action",
+      "Time Spent (minutes)",
+      "Status",
+      "Employee Department",
+      "Priority",
+      "Created Date",
+      "Created Time",
+      "Last Updated",
     ];
 
-    const excelData = tickets.map(ticket => [
-      ticket.id || '',
+    const excelData = tickets.map((ticket) => [
+      ticket.id || "",
       ticket.date,
       ticket.itStaffName,
       ticket.itStaffEmail,
@@ -123,20 +179,29 @@ const TicketsTable = ({ tickets, onUpdateStatus }: TicketsTableProps) => {
       ticket.priority,
       formatDate(ticket.createdAt),
       formatTime(ticket.createdAt),
-      ticket.updatedAt ? `${formatDate(ticket.updatedAt)} ${formatTime(ticket.updatedAt)}` : ''
+      ticket.updatedAt
+        ? `${formatDate(ticket.updatedAt)} ${formatTime(ticket.updatedAt)}`
+        : "",
     ]);
 
     const csvContent = [
-      headers.join(','),
-      ...excelData.map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
+      headers.join(","),
+      ...excelData.map((row) =>
+        row.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(",")
+      ),
+    ].join("\n");
 
-    const blob = new Blob([csvContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], {
+      type: "application/vnd.ms-excel;charset=utf-8;",
+    });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `helpdesk-tickets-${new Date().toISOString().split('T')[0]}.xlsx`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `helpdesk-tickets-${new Date().toISOString().split("T")[0]}.xlsx`
+    );
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -168,6 +233,7 @@ const TicketsTable = ({ tickets, onUpdateStatus }: TicketsTableProps) => {
               <TableHead>Resolution</TableHead>
               <TableHead>Time</TableHead>
               <TableHead>Department</TableHead>
+              <TableHead>Employee</TableHead>
               <TableHead>Priority</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
@@ -176,7 +242,10 @@ const TicketsTable = ({ tickets, onUpdateStatus }: TicketsTableProps) => {
           <TableBody>
             {tickets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                <TableCell
+                  colSpan={10}
+                  className="text-center py-8 text-gray-500"
+                >
                   No tickets found
                 </TableCell>
               </TableRow>
@@ -185,14 +254,19 @@ const TicketsTable = ({ tickets, onUpdateStatus }: TicketsTableProps) => {
                 <TableRow key={ticket.id}>
                   <TableCell className="font-medium">
                     <div>
-                      <div className="text-sm">{formatDate(ticket.createdAt)}</div>
-                      <div className="text-xs text-gray-500">{formatTime(ticket.createdAt)}</div>
+                      <div className="text-sm">
+                        {formatDate(ticket.createdAt)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {formatTime(ticket.createdAt)}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium text-sm">{ticket.itStaffName}</div>
-                      <div className="text-xs text-gray-500">{ticket.itStaffEmail}</div>
+                      <div className="font-medium text-sm">
+                        {ticket.itStaffName}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -200,34 +274,43 @@ const TicketsTable = ({ tickets, onUpdateStatus }: TicketsTableProps) => {
                   </TableCell>
                   <TableCell>
                     <div className="max-w-xs">
-                      <div className="text-sm font-medium truncate" title={ticket.specificIssue}>
+                      <div
+                        className="text-sm font-medium truncate"
+                        title={ticket.specificIssue}
+                      >
                         {ticket.specificIssue}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="max-w-xs">
-                      <div className="text-sm truncate" title={ticket.resolutionAction}>
+                      <div
+                        className="text-sm truncate"
+                        title={ticket.resolutionAction}
+                      >
                         {ticket.resolutionAction}
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>{ticket.timeSpent}m</TableCell>
-                  <TableCell>{ticket.employeeDepartment}</TableCell>
+                  <TableCell>{ticket.timeSpent} mins</TableCell>
+                  <TableCell>{ticket.department}</TableCell>
+                  <TableCell>{ticket.employeeName}</TableCell>
                   <TableCell>
-                    <Badge className={getPriorityColor(ticket.priority)} size="sm">
+                    <Badge className={getPriorityColor(ticket.priority)}>
                       {ticket.priority}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(ticket.ticketStatus)} size="sm">
+                    <Badge className={getStatusColor(ticket.ticketStatus)}>
                       {ticket.ticketStatus}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <Select 
-                      value={ticket.ticketStatus} 
-                      onValueChange={(value) => onUpdateStatus(ticket.id!, value as any)}
+                  <TableCell className="flex gap-2 items-center">
+                    <Select
+                      value={ticket.ticketStatus}
+                      onValueChange={(value) =>
+                        onUpdateStatus(ticket.id!, value as any)
+                      }
                     >
                       <SelectTrigger className="w-24">
                         <SelectValue />
@@ -238,6 +321,30 @@ const TicketsTable = ({ tickets, onUpdateStatus }: TicketsTableProps) => {
                         <SelectItem value="Resolved">Resolved</SelectItem>
                       </SelectContent>
                     </Select>
+                    <EditTicketDialog
+                      ticket={ticket}
+                      onUpdate={(updated) => onEditTicket(ticket.id!, updated)}
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleDeleteClick(ticket.id!)}
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                      title="Delete Ticket"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+
+                    <ConfirmDialog
+                      open={deleteDialogOpen}
+                      title="Delete Ticket?"
+                      description="Are you sure you want to delete this ticket? This action cannot be undone."
+                      confirmText="Yes, Delete"
+                      cancelText="Cancel"
+                      onConfirm={handleDeleteConfirm}
+                      onCancel={handleDeleteCancel}
+                      danger
+                    />
                   </TableCell>
                 </TableRow>
               ))

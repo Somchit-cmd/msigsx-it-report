@@ -19,11 +19,24 @@ interface CreateTicketDialogProps {
   onCreateTicket: (ticket: any) => Promise<void>;
 }
 
+interface TicketFormData {
+  itStaffName: string;
+  itStaffEmail: string;
+  issueCategory: string;
+  specificIssue: string;
+  resolutionAction: string;
+  timeSpent: string;
+  ticketStatus: 'Opened' | 'Resolved' | 'Pending';
+  department: string;
+  employeeName: string;
+  priority: 'Low' | 'Medium' | 'High';
+}
+
 const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) => {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<TicketFormData>({
     itStaffName: user.name,
     itStaffEmail: user.email,
     issueCategory: '',
@@ -31,7 +44,8 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
     resolutionAction: '',
     timeSpent: '',
     ticketStatus: 'Opened',
-    employeeDepartment: '',
+    department: '',
+    employeeName: '',
     priority: 'Medium',
   });
 
@@ -50,6 +64,16 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
     'Opened',
     'Resolved',
     'Pending'
+  ];
+
+  const departments = [
+    'HR',
+    'Finance and Accounting',
+    'Health Claims',
+    'Non-Health Claims',
+    'Legal and Compliance',
+    'Sales and Marketing',
+    'Underwriting'
   ];
 
   const priorities = [
@@ -72,7 +96,8 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
         resolutionAction: formData.resolutionAction,
         timeSpent: parseInt(formData.timeSpent) || 0,
         ticketStatus: formData.ticketStatus as 'Opened' | 'Resolved' | 'Pending',
-        employeeDepartment: formData.employeeDepartment,
+        department: formData.department,
+        employeeName: formData.employeeName,
         priority: formData.priority as 'Low' | 'Medium' | 'High',
       };
 
@@ -87,7 +112,8 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
         resolutionAction: '',
         timeSpent: '',
         ticketStatus: 'Opened',
-        employeeDepartment: '',
+        department: '',
+        employeeName: '',
         priority: 'Medium',
       });
       
@@ -116,7 +142,7 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date">Date & Time</Label>
               <Input
@@ -136,7 +162,7 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
                 className="bg-gray-50"
               />
             </div>
-          </div>
+          </div> */}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -157,7 +183,7 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
 
             <div className="space-y-2">
               <Label htmlFor="priority">Priority</Label>
-              <Select value={formData.priority} onValueChange={(value) => setFormData({...formData, priority: value})}>
+              <Select value={formData.priority} onValueChange={(value) => setFormData({...formData, priority: value as 'Low' | 'Medium' | 'High'})}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -169,6 +195,32 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="department">Department</Label>
+              <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="employeeName">Employee Name</Label>
+              <Input
+                id="employeeName"
+                value={formData.employeeName}
+                onChange={(e) => setFormData({...formData, employeeName: e.target.value})}
+                placeholder="John Doe"
+                required
+              />
             </div>
           </div>
 
@@ -196,7 +248,7 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="timeSpent">Time Spent (Minutes)</Label>
               <Input
@@ -212,7 +264,7 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
 
             <div className="space-y-2">
               <Label htmlFor="status">Ticket Status</Label>
-              <Select value={formData.ticketStatus} onValueChange={(value) => setFormData({...formData, ticketStatus: value})}>
+              <Select value={formData.ticketStatus} onValueChange={(value) => setFormData({...formData, ticketStatus: value as 'Opened' | 'Resolved' | 'Pending'})}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -224,17 +276,6 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="department">Employee/Department Affected</Label>
-              <Input
-                id="department"
-                value={formData.employeeDepartment}
-                onChange={(e) => setFormData({...formData, employeeDepartment: e.target.value})}
-                placeholder="e.g., Finance, HR, John Doe"
-                required
-              />
             </div>
           </div>
 
