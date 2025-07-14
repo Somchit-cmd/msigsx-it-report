@@ -1,10 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Ticket, Clock, CheckCircle, AlertCircle, User, Calendar, Timer } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import CreateTicketDialog from './tickets/CreateTicketDialog';
+import TicketsTable from './tickets/TicketsTable';
 import { helpdeskService, WorkTicket } from '@/services/helpdeskService';
 import { Timestamp } from 'firebase/firestore';
 
@@ -190,80 +193,94 @@ const HelpdeskTracker = ({ user }: HelpdeskTrackerProps) => {
         <CreateTicketDialog user={user} onCreateTicket={handleCreateTicket} />
       </div>
 
-      {/* Tickets List */}
-      <div className="space-y-4">
-        {tickets.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <p className="text-gray-500">No tickets found. Create your first ticket!</p>
-            </CardContent>
-          </Card>
-        ) : (
-          tickets.map((ticket) => (
-            <Card key={ticket.id}>
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 lg:gap-0">
-                  <div className="flex-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
-                      <h3 className="font-semibold text-sm sm:text-base">{ticket.specificIssue}</h3>
-                      <div className="flex flex-wrap gap-1 sm:gap-2">
-                        <Badge className={getPriorityColor(ticket.priority)}>
-                          {ticket.priority}
-                        </Badge>
-                        <Badge variant="outline">{ticket.issueCategory}</Badge>
+      {/* Tickets Tabs */}
+      <Tabs defaultValue="cards" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="cards">Card View</TabsTrigger>
+          <TabsTrigger value="table">Data Table</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="cards" className="space-y-4 mt-6">
+          {tickets.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <p className="text-gray-500">No tickets found. Create your first ticket!</p>
+              </CardContent>
+            </Card>
+          ) : (
+            tickets.map((ticket) => (
+              <Card key={ticket.id}>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 lg:gap-0">
+                    <div className="flex-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+                        <h3 className="font-semibold text-sm sm:text-base">{ticket.specificIssue}</h3>
+                        <div className="flex flex-wrap gap-1 sm:gap-2">
+                          <Badge className={getPriorityColor(ticket.priority)}>
+                            {ticket.priority}
+                          </Badge>
+                          <Badge variant="outline">{ticket.issueCategory}</Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2 mb-3">
+                        <p className="text-sm text-gray-600">
+                          <strong>Resolution:</strong> {ticket.resolutionAction}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          <strong>Affected:</strong> {ticket.employeeDepartment}
+                        </p>
+                      </div>
+                      
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          {ticket.itStaffName}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(ticket.createdAt)} {formatTime(ticket.createdAt)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Timer className="h-3 w-3" />
+                          {ticket.timeSpent} minutes
+                        </span>
                       </div>
                     </div>
                     
-                    <div className="space-y-2 mb-3">
-                      <p className="text-sm text-gray-600">
-                        <strong>Resolution:</strong> {ticket.resolutionAction}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        <strong>Affected:</strong> {ticket.employeeDepartment}
-                      </p>
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        {ticket.itStaffName}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(ticket.createdAt)} {formatTime(ticket.createdAt)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Timer className="h-3 w-3" />
-                        {ticket.timeSpent} minutes
-                      </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 lg:ml-4">
+                      <Badge className={getStatusColor(ticket.ticketStatus)}>
+                        {getStatusIcon(ticket.ticketStatus)}
+                        <span className="ml-1">{ticket.ticketStatus}</span>
+                      </Badge>
+                      <Select 
+                        value={ticket.ticketStatus} 
+                        onValueChange={(value) => updateTicketStatus(ticket.id!, value as any)}
+                      >
+                        <SelectTrigger className="w-full sm:w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Opened">Opened</SelectItem>
+                          <SelectItem value="Pending">Pending</SelectItem>
+                          <SelectItem value="Resolved">Resolved</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
-                  
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 lg:ml-4">
-                    <Badge className={getStatusColor(ticket.ticketStatus)}>
-                      {getStatusIcon(ticket.ticketStatus)}
-                      <span className="ml-1">{ticket.ticketStatus}</span>
-                    </Badge>
-                    <Select 
-                      value={ticket.ticketStatus} 
-                      onValueChange={(value) => updateTicketStatus(ticket.id!, value as any)}
-                    >
-                      <SelectTrigger className="w-full sm:w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Opened">Opened</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Resolved">Resolved</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+        
+        <TabsContent value="table" className="mt-6">
+          <TicketsTable 
+            tickets={tickets} 
+            onUpdateStatus={updateTicketStatus}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
