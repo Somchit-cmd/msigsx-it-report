@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   ChartContainer,
@@ -263,7 +262,7 @@ const TicketsReportTab: React.FC<TicketsReportTabProps> = ({ tickets }) => {
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Tickets Over Time */}
+        {/* Tickets Over Time - Changed to Line Chart */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -279,15 +278,36 @@ const TicketsReportTab: React.FC<TicketsReportTabProps> = ({ tickets }) => {
             ) : (
               <ChartContainer config={{}}>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={timeBasedData}>
+                  <LineChart data={timeBasedData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="label" fontSize={12} />
                     <YAxis />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="opened" fill="#ef4444" name="Opened" />
-                    <Bar dataKey="pending" fill="#f59e0b" name="Pending" />
-                    <Bar dataKey="resolved" fill="#22c55e" name="Resolved" />
-                  </BarChart>
+                    <Line 
+                      type="monotone" 
+                      dataKey="opened" 
+                      stroke="#ef4444" 
+                      strokeWidth={3}
+                      dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }}
+                      name="Opened"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="pending" 
+                      stroke="#f59e0b" 
+                      strokeWidth={3}
+                      dot={{ fill: "#f59e0b", strokeWidth: 2, r: 4 }}
+                      name="Pending"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="resolved" 
+                      stroke="#22c55e" 
+                      strokeWidth={3}
+                      dot={{ fill: "#22c55e", strokeWidth: 2, r: 4 }}
+                      name="Resolved"
+                    />
+                  </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
             )}
