@@ -297,9 +297,9 @@ const HelpdeskTracker = ({ user }: HelpdeskTrackerProps) => {
       {/* Tickets Tabs */}
       <Tabs defaultValue="cards" className="w-full">
         <TabsList className="grid w-full grid-cols-3 max-w-lg">
-          <TabsTrigger value="cards">Card View</TabsTrigger>
-          <TabsTrigger value="table">Data Table</TabsTrigger>
-          <TabsTrigger value="report">Report</TabsTrigger>
+          <TabsTrigger value="cards">Ticket List</TabsTrigger>
+          <TabsTrigger value="table">Ticket Table</TabsTrigger>
+          <TabsTrigger value="report">Ticket Report</TabsTrigger>
         </TabsList>
 
         <TabsContent value="cards" className="space-y-4 mt-6">

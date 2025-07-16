@@ -137,19 +137,55 @@ const TABS = [
 
 type TabKey = typeof TABS[number]["key"];
 
+// Helper to check if a ticket is in the current period
+function isTicketInCurrentPeriod(ticket: WorkTicket, period: "day" | "week" | "month") {
+  const now = new Date();
+  const date = ticket.createdAt.toDate();
+  if (period === "day") {
+    return (
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate()
+    );
+  } else if (period === "week") {
+    // ISO week calculation
+    const getWeek = (d: Date) => {
+      d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const dayNum = d.getUTCDay() || 7;
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+      return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1)/7);
+    };
+    return (
+      date.getFullYear() === now.getFullYear() &&
+      getWeek(date) === getWeek(now)
+    );
+  } else if (period === "month") {
+    return (
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth()
+    );
+  }
+  return false;
+}
+
 const TicketsReportTab: React.FC<TicketsReportTabProps> = ({ tickets }) => {
   const [activeTab, setActiveTab] = useState<TabKey>("day");
   
+  // Filter tickets for the current period only (for summary cards)
+  const filteredTickets = tickets.filter(ticket => isTicketInCurrentPeriod(ticket, activeTab));
+
+  // Use ALL tickets for time-based charts to show all periods
   const timeBasedData = groupTicketsBy(tickets, activeTab);
-  const statusData = getStatusData(tickets);
-  const categoryData = getCategoryData(tickets);
-  const departmentData = getDepartmentData(tickets);
-  const priorityData = getPriorityData(tickets);
+  const statusData = getStatusData(filteredTickets);
+  const categoryData = getCategoryData(filteredTickets);
+  const departmentData = getDepartmentData(filteredTickets);
+  const priorityData = getPriorityData(filteredTickets);
   const timeSpentData = getTimeSpentData(tickets, activeTab);
 
-  const totalTickets = tickets.length;
-  const avgTimeSpent = tickets.length > 0 ? Math.round(tickets.reduce((sum, t) => sum + t.timeSpent, 0) / tickets.length) : 0;
-  const resolvedRate = tickets.length > 0 ? Math.round((tickets.filter(t => t.ticketStatus === "Resolved").length / tickets.length) * 100) : 0;
+  const totalTickets = filteredTickets.length;
+  const avgTimeSpent = filteredTickets.length > 0 ? Math.round(filteredTickets.reduce((sum, t) => sum + t.timeSpent, 0) / filteredTickets.length) : 0;
+  const resolvedRate = filteredTickets.length > 0 ? Math.round((filteredTickets.filter(t => t.ticketStatus === "Resolved").length / filteredTickets.length) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -226,7 +262,7 @@ const TicketsReportTab: React.FC<TicketsReportTabProps> = ({ tickets }) => {
       </div>
 
       {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Tickets Over Time */}
         <Card>
           <CardHeader>
@@ -299,17 +335,26 @@ const TicketsReportTab: React.FC<TicketsReportTabProps> = ({ tickets }) => {
           </CardHeader>
           <CardContent>
             <ChartContainer config={{}}>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={categoryData} layout="horizontal">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis type="category" dataKey="name" width={100} fontSize={12} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="value" fill="#3b82f6">
-                    <LabelList dataKey="value" position="right" />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              {categoryData.length === 0 ? (
+                <div className="flex items-center justify-center h-64 text-gray-400">
+                  <span>No category data</span>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={categoryData} margin={{ top: 24, right: 24, left: 16, bottom: 36 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" fontSize={13} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} label={{ value: 'Category', position: 'bottom', offset: 10 }} />
+                    <YAxis allowDecimals={false} fontSize={13} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} label={{ value: 'Tickets', angle: -90, position: 'insideLeft', offset: 10 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="value">
+                      {categoryData.map((entry, idx) => (
+                        <Cell key={`cell-${idx}`} fill={entry.color || '#3b82f6'} />
+                      ))}
+                      <LabelList dataKey="value" position="top" fontSize={14} fill="#222" />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </ChartContainer>
           </CardContent>
         </Card>

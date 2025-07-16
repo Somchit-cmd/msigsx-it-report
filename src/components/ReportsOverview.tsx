@@ -1,5 +1,6 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import pptxgen from 'pptxgenjs';
 import { collection, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { getWeeksInMonth, getWeekOfMonth, startOfMonth, addDays, format } from 'date-fns';
@@ -9,7 +10,87 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { FileText, Download, TrendingUp, Calendar } from 'lucide-react';
 
+const GEMINI_API_KEY = "AIzaSyAOwO8Dp5U7d903WkXXyCbCYiS1wlEycwY";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + GEMINI_API_KEY;
+
 const ReportsOverview = () => {
+  // Ref for the report section
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  // Helper to call Gemini AI
+  async function getGeminiSummary(prompt: string): Promise<string> {
+    const body = {
+      contents: [{ parts: [{ text: prompt }] }]
+    };
+    const response = await fetch(GEMINI_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await response.json();
+    if (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+      return data.candidates[0].content.parts.map((p: any) => p.text).join('\n');
+    }
+    return 'No summary generated.';
+  }
+
+  // Handler for Export PPTX
+  async function handleExportPPTX() {
+    // Gather data for summary
+    const ticketSummary = ticketData.map((t: any) => `${t.name}: Opened ${t.open}, Resolved ${t.resolved}, Pending ${t.pending}`).join("; ");
+    const uptimeSummary = uptimeData.map((u: any) => `${u.name}: ${u.uptime}%`).join("; ");
+    const incidentSummary = securityIncidentTypes.map((i: any) => `${i.name}: ${i.value}`).join("; ");
+    const projectSummary = projectStatus.map((p: any) => `${p.name}: ${p.value}`).join("; ");
+    const prompt = `Summarize this IT monthly report data for a PowerPoint executive summary:\n\nTickets: ${ticketSummary}\nUptime: ${uptimeSummary}\nIncidents: ${incidentSummary}\nProjects: ${projectSummary}`;
+
+    // Call Gemini for summary
+    let aiSummary = 'Generating summary...';
+    try {
+      aiSummary = await getGeminiSummary(prompt);
+    } catch (e) {
+      aiSummary = 'AI summary failed.';
+    }
+
+    // Create PPTX
+    const pptx = new pptxgen();
+    // Summary Slide
+    const slideSummary = pptx.addSlide();
+    slideSummary.addText('Monthly IT Performance Summary', { x: 0.5, y: 0.3, fontSize: 24, bold: true });
+    slideSummary.addText(aiSummary, { x: 0.5, y: 1, w: 8, h: 4, fontSize: 18, color: '363636', align: 'left' });
+
+    // Tickets Chart slide
+    const slideTickets = pptx.addSlide();
+    slideTickets.addText('Weekly Support Tickets', { x: 0.5, y: 0.3, fontSize: 18, bold: true });
+    slideTickets.addChart(pptx.ChartType.bar, [
+      { name: 'Opened', labels: ticketData.map((t: any) => t.name), values: ticketData.map((t: any) => t.open) },
+      { name: 'Resolved', labels: ticketData.map((t: any) => t.name), values: ticketData.map((t: any) => t.resolved) },
+      { name: 'Pending', labels: ticketData.map((t: any) => t.name), values: ticketData.map((t: any) => t.pending) },
+    ], { x: 0.5, y: 1, w: 8, h: 3 });
+
+    // Uptime Chart slide
+    const slideUptime = pptx.addSlide();
+    slideUptime.addText('System Uptime Performance', { x: 0.5, y: 0.3, fontSize: 18, bold: true });
+    slideUptime.addChart(pptx.ChartType.bar, [
+      { name: 'Uptime', labels: uptimeData.map((u: any) => u.name), values: uptimeData.map((u: any) => u.uptime) },
+    ], { x: 0.5, y: 1, w: 8, h: 3 });
+
+    // Incidents Pie chart
+    const slideIncidents = pptx.addSlide();
+    slideIncidents.addText('Security Incident Types', { x: 0.5, y: 0.3, fontSize: 18, bold: true });
+    slideIncidents.addChart(pptx.ChartType.pie, [
+      { name: 'Incidents', labels: securityIncidentTypes.map((i: any) => i.name), values: securityIncidentTypes.map((i: any) => i.value) },
+    ], { x: 1, y: 1, w: 6, h: 4 });
+
+    // Project Status Pie chart
+    const slideProjects = pptx.addSlide();
+    slideProjects.addText('Project Status Distribution', { x: 0.5, y: 0.3, fontSize: 18, bold: true });
+    slideProjects.addChart(pptx.ChartType.pie, [
+      { name: 'Projects', labels: projectStatus.map((p: any) => p.name), values: projectStatus.map((p: any) => p.value) },
+    ], { x: 1, y: 1, w: 6, h: 4 });
+
+    pptx.writeFile({ fileName: 'IT_Performance_Report.pptx' });
+  }
+
   // State for Firestore-powered weekly ticket data
   const [ticketData, setTicketData] = useState([]);
 
@@ -115,7 +196,7 @@ const ReportsOverview = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={reportRef}>
       {/* Report Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-0">
         <div>
@@ -127,7 +208,7 @@ const ReportsOverview = () => {
             <Calendar className="h-4 w-4" />
             Previous Month
           </Button>
-          <Button className="flex items-center gap-2 w-full sm:w-auto">
+          <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={handleExportPPTX}>
             <Download className="h-4 w-4" />
             Export Report
           </Button>
