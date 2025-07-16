@@ -15,12 +15,16 @@ interface TicketsReportTabProps {
 }
 
 function groupTicketsBy(tickets: WorkTicket[], type: "day" | "week" | "month") {
-  const map = new Map<string, { opened: number; resolved: number; pending: number }>();
+  const map = new Map<string, { opened: number; resolved: number; pending: number; sortKey: string }>();
   tickets.forEach((ticket) => {
     const date = ticket.createdAt.toDate();
     let key = "";
+    let sortKey = "";
+    
     if (type === "day") {
       key = date.toLocaleDateString();
+      // Use ISO date format for sorting
+      sortKey = date.toISOString().split('T')[0];
     } else if (type === "week") {
       const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
       const days = Math.floor(
@@ -28,14 +32,16 @@ function groupTicketsBy(tickets: WorkTicket[], type: "day" | "week" | "month") {
       );
       const week = Math.ceil((days + firstDayOfYear.getDay() + 1) / 7);
       key = `${date.getFullYear()}-W${week}`;
+      sortKey = `${date.getFullYear()}-${week.toString().padStart(2, '0')}`;
     } else if (type === "month") {
       key = `${date.getFullYear()}-${(date.getMonth() + 1)
         .toString()
         .padStart(2, "0")}`;
+      sortKey = key;
     }
     
     if (!map.has(key)) {
-      map.set(key, { opened: 0, resolved: 0, pending: 0 });
+      map.set(key, { opened: 0, resolved: 0, pending: 0, sortKey });
     }
     
     const entry = map.get(key)!;
@@ -45,7 +51,7 @@ function groupTicketsBy(tickets: WorkTicket[], type: "day" | "week" | "month") {
   });
   
   return Array.from(map.entries())
-    .sort((a, b) => (a[0] > b[0] ? 1 : -1))
+    .sort((a, b) => a[1].sortKey.localeCompare(b[1].sortKey))
     .map(([label, data]) => ({ label, ...data, total: data.opened + data.resolved + data.pending }));
 }
 
@@ -102,13 +108,16 @@ function getPriorityData(tickets: WorkTicket[]) {
 }
 
 function getTimeSpentData(tickets: WorkTicket[], timeframe: "day" | "week" | "month") {
-  const timeMap = new Map<string, number>();
+  const timeMap = new Map<string, { timeSpent: number; sortKey: string }>();
   
   tickets.forEach((ticket) => {
     const date = ticket.createdAt.toDate();
     let key = "";
+    let sortKey = "";
+    
     if (timeframe === "day") {
       key = date.toLocaleDateString();
+      sortKey = date.toISOString().split('T')[0];
     } else if (timeframe === "week") {
       const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
       const days = Math.floor(
@@ -116,16 +125,23 @@ function getTimeSpentData(tickets: WorkTicket[], timeframe: "day" | "week" | "mo
       );
       const week = Math.ceil((days + firstDayOfYear.getDay() + 1) / 7);
       key = `W${week}`;
+      sortKey = `${date.getFullYear()}-${week.toString().padStart(2, '0')}`;
     } else if (timeframe === "month") {
       key = date.toLocaleDateString('en-US', { month: 'short' });
+      sortKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
     }
     
-    timeMap.set(key, (timeMap.get(key) || 0) + ticket.timeSpent);
+    if (!timeMap.has(key)) {
+      timeMap.set(key, { timeSpent: 0, sortKey });
+    }
+    
+    const entry = timeMap.get(key)!;
+    entry.timeSpent += ticket.timeSpent;
   });
   
   return Array.from(timeMap.entries())
-    .sort((a, b) => (a[0] > b[0] ? 1 : -1))
-    .map(([period, timeSpent]) => ({ period, timeSpent }));
+    .sort((a, b) => a[1].sortKey.localeCompare(b[1].sortKey))
+    .map(([period, data]) => ({ period, timeSpent: data.timeSpent }));
 }
 
 const TABS = [
