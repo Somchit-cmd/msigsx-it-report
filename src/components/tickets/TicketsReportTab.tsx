@@ -1,28 +1,28 @@
 
-
 import React, { useState } from "react";
 import {
   ChartContainer,
   ChartTooltip,
-  ChartLegend,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList, PieChart, Pie, Cell, LineChart, Line, CartesianGrid } from "recharts";
 import { WorkTicket } from "@/services/helpdeskService";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { TrendingUp, Users, Clock, AlertTriangle, Briefcase, Ticket } from "lucide-react";
 
 interface TicketsReportTabProps {
   tickets: WorkTicket[];
 }
 
 function groupTicketsBy(tickets: WorkTicket[], type: "day" | "week" | "month") {
-  const map = new Map<string, number>();
+  const map = new Map<string, { opened: number; resolved: number; pending: number }>();
   tickets.forEach((ticket) => {
     const date = ticket.createdAt.toDate();
     let key = "";
     if (type === "day") {
       key = date.toLocaleDateString();
     } else if (type === "week") {
-      // Get year-week
       const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
       const days = Math.floor(
         (date.getTime() - firstDayOfYear.getTime()) / (24 * 60 * 60 * 1000)
@@ -34,12 +34,99 @@ function groupTicketsBy(tickets: WorkTicket[], type: "day" | "week" | "month") {
         .toString()
         .padStart(2, "0")}`;
     }
-    map.set(key, (map.get(key) || 0) + 1);
+    
+    if (!map.has(key)) {
+      map.set(key, { opened: 0, resolved: 0, pending: 0 });
+    }
+    
+    const entry = map.get(key)!;
+    if (ticket.ticketStatus === "Opened") entry.opened++;
+    else if (ticket.ticketStatus === "Resolved") entry.resolved++;
+    else if (ticket.ticketStatus === "Pending") entry.pending++;
   });
-  // Sort keys
+  
   return Array.from(map.entries())
     .sort((a, b) => (a[0] > b[0] ? 1 : -1))
-    .map(([label, count]) => ({ label, count }));
+    .map(([label, data]) => ({ label, ...data, total: data.opened + data.resolved + data.pending }));
+}
+
+function getStatusData(tickets: WorkTicket[]) {
+  const statusCount = tickets.reduce((acc, ticket) => {
+    acc[ticket.ticketStatus] = (acc[ticket.ticketStatus] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  return Object.entries(statusCount).map(([status, count]) => ({
+    name: status,
+    value: count,
+    color: status === "Opened" ? "#ef4444" : status === "Resolved" ? "#22c55e" : "#f59e0b"
+  }));
+}
+
+function getCategoryData(tickets: WorkTicket[]) {
+  const categoryCount = tickets.reduce((acc, ticket) => {
+    acc[ticket.issueCategory] = (acc[ticket.issueCategory] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const colors = ["#3b82f6", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
+  return Object.entries(categoryCount).map(([category, count], index) => ({
+    name: category,
+    value: count,
+    color: colors[index % colors.length]
+  }));
+}
+
+function getDepartmentData(tickets: WorkTicket[]) {
+  const departmentCount = tickets.reduce((acc, ticket) => {
+    acc[ticket.department] = (acc[ticket.department] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  return Object.entries(departmentCount).map(([department, count]) => ({
+    department,
+    count
+  }));
+}
+
+function getPriorityData(tickets: WorkTicket[]) {
+  const priorityCount = tickets.reduce((acc, ticket) => {
+    acc[ticket.priority] = (acc[ticket.priority] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  return Object.entries(priorityCount).map(([priority, count]) => ({
+    name: priority,
+    value: count,
+    color: priority === "High" ? "#ef4444" : priority === "Medium" ? "#f59e0b" : "#22c55e"
+  }));
+}
+
+function getTimeSpentData(tickets: WorkTicket[], timeframe: "day" | "week" | "month") {
+  const timeMap = new Map<string, number>();
+  
+  tickets.forEach((ticket) => {
+    const date = ticket.createdAt.toDate();
+    let key = "";
+    if (timeframe === "day") {
+      key = date.toLocaleDateString();
+    } else if (timeframe === "week") {
+      const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+      const days = Math.floor(
+        (date.getTime() - firstDayOfYear.getTime()) / (24 * 60 * 60 * 1000)
+      );
+      const week = Math.ceil((days + firstDayOfYear.getDay() + 1) / 7);
+      key = `W${week}`;
+    } else if (timeframe === "month") {
+      key = date.toLocaleDateString('en-US', { month: 'short' });
+    }
+    
+    timeMap.set(key, (timeMap.get(key) || 0) + ticket.timeSpent);
+  });
+  
+  return Array.from(timeMap.entries())
+    .sort((a, b) => (a[0] > b[0] ? 1 : -1))
+    .map(([period, timeSpent]) => ({ period, timeSpent }));
 }
 
 const TABS = [
@@ -50,67 +137,303 @@ const TABS = [
 
 type TabKey = typeof TABS[number]["key"];
 
-const chartColors: Record<TabKey, string> = {
-  day: "#2563eb",
-  week: "#22c55e",
-  month: "#f59e42",
-};
-
 const TicketsReportTab: React.FC<TicketsReportTabProps> = ({ tickets }) => {
   const [activeTab, setActiveTab] = useState<TabKey>("day");
-  const grouped = {
-    day: groupTicketsBy(tickets, "day"),
-    week: groupTicketsBy(tickets, "week"),
-    month: groupTicketsBy(tickets, "month"),
-  };
-  const activeData = grouped[activeTab];
+  
+  const timeBasedData = groupTicketsBy(tickets, activeTab);
+  const statusData = getStatusData(tickets);
+  const categoryData = getCategoryData(tickets);
+  const departmentData = getDepartmentData(tickets);
+  const priorityData = getPriorityData(tickets);
+  const timeSpentData = getTimeSpentData(tickets, activeTab);
+
+  const totalTickets = tickets.length;
+  const avgTimeSpent = tickets.length > 0 ? Math.round(tickets.reduce((sum, t) => sum + t.timeSpent, 0) / tickets.length) : 0;
+  const resolvedRate = tickets.length > 0 ? Math.round((tickets.filter(t => t.ticketStatus === "Resolved").length / tickets.length) * 100) : 0;
 
   return (
-    <div className="flex justify-center items-start w-full mt-6">
-      <div className="w-full max-w-3xl">
-        <div className="flex gap-2 mb-4" role="tablist" aria-label="Ticket Granularity Tabs">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              className={`px-4 py-2 rounded-t-lg font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                activeTab === tab.key
-                  ? "bg-white shadow text-blue-700 border-b-2 border-blue-600"
-                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-              }`}
-              role="tab"
-              aria-selected={activeTab === tab.key}
-              aria-controls={`tickets-${tab.key}-panel`}
-              id={`tickets-${tab.key}-tab`}
-              tabIndex={activeTab === tab.key ? 0 : -1}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-        <div className="bg-white rounded-lg shadow p-6 min-h-[370px]" id={`tickets-${activeTab}-panel`} role="tabpanel" aria-labelledby={`tickets-${activeTab}-tab`}>
-          <h3 className="font-semibold mb-4 text-lg text-gray-800">Support Tickets Count</h3>
-          {activeData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-60 text-gray-400">
-              <svg width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mb-2"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 018 0v2M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2h-4.18A2 2 0 0113 3.82V3a2 2 0 00-2-2H7a2 2 0 00-2 2v16a2 2 0 002 2z" /></svg>
-              <span>No tickets found for this range.</span>
+    <div className="space-y-6">
+      {/* Time Range Tabs */}
+      <div className="flex gap-2" role="tablist" aria-label="Ticket Granularity Tabs">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              activeTab === tab.key
+                ? "bg-blue-600 text-white shadow-lg"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+            role="tab"
+            aria-selected={activeTab === tab.key}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Key Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Tickets</p>
+                <p className="text-2xl font-bold text-blue-600">{totalTickets}</p>
+              </div>
+              <Ticket className="h-8 w-8 text-blue-600" />
             </div>
-          ) : (
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Resolution Rate</p>
+                <p className="text-2xl font-bold text-green-600">{resolvedRate}%</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Avg Time Spent</p>
+                <p className="text-2xl font-bold text-purple-600">{avgTimeSpent}m</p>
+              </div>
+              <Clock className="h-8 w-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Open Tickets</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {tickets.filter(t => t.ticketStatus === "Opened").length}
+                </p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Tickets Over Time */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Tickets Over Time ({activeTab.charAt(0).toUpperCase() + activeTab.slice(1)})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {timeBasedData.length === 0 ? (
+              <div className="flex items-center justify-center h-64 text-gray-400">
+                <span>No data available</span>
+              </div>
+            ) : (
+              <ChartContainer config={{}}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={timeBasedData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="label" fontSize={12} />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="opened" fill="#ef4444" name="Opened" />
+                    <Bar dataKey="pending" fill="#f59e0b" name="Pending" />
+                    <Bar dataKey="resolved" fill="#22c55e" name="Resolved" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Tickets by Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Ticket className="h-5 w-5" />
+              Tickets by Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <ChartContainer config={{}}>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={activeData} margin={{ top: 10, right: 16, left: 0, bottom: 32 }}>
-                  <XAxis dataKey="label" fontSize={12} angle={-30} textAnchor="end" height={60} tick={{ fill: '#64748b' }} />
-                  <YAxis allowDecimals={false} tick={{ fill: '#64748b' }} />
-                  <Bar dataKey="count" fill={chartColors[activeTab]} radius={[6, 6, 0, 0]}>
-                    <LabelList dataKey="count" position="top" fill="#334155" fontSize={13} />
-                  </Bar>
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
                   <ChartTooltip content={<ChartTooltipContent />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        {/* Tickets by Category */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5" />
+              Tickets by Category
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={{}}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={categoryData} layout="horizontal">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis type="category" dataKey="name" width={100} fontSize={12} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="value" fill="#3b82f6">
+                    <LabelList dataKey="value" position="right" />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
-          )}
-        </div>
+          </CardContent>
+        </Card>
+
+        {/* Tickets by Department */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Tickets by Department
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={{}}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={departmentData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="department" fontSize={12} />
+                  <YAxis />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="count" fill="#8b5cf6">
+                    <LabelList dataKey="count" position="top" />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        {/* Tickets by Priority */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Tickets by Priority
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={{}}>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={priorityData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`}
+                  >
+                    {priorityData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        {/* Time Spent Analysis */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Time Spent Analysis ({activeTab.charAt(0).toUpperCase() + activeTab.slice(1)})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={{}}>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={timeSpentData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="period" fontSize={12} />
+                  <YAxis />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="timeSpent" 
+                    stroke="#06b6d4" 
+                    strokeWidth={3}
+                    dot={{ fill: "#06b6d4", strokeWidth: 2, r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Summary Insights */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Key Insights</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-semibold text-blue-800 mb-2">Most Active Category</h4>
+              <p className="text-blue-700">
+                {categoryData.length > 0 && 
+                  `${categoryData.reduce((max, cat) => cat.value > max.value ? cat : max).name} (${categoryData.reduce((max, cat) => cat.value > max.value ? cat : max).value} tickets)`
+                }
+              </p>
+            </div>
+            
+            <div className="p-4 bg-green-50 rounded-lg">
+              <h4 className="font-semibold text-green-800 mb-2">Top Department</h4>
+              <p className="text-green-700">
+                {departmentData.length > 0 && 
+                  `${departmentData.reduce((max, dept) => dept.count > max.count ? dept : max).department} (${departmentData.reduce((max, dept) => dept.count > max.count ? dept : max).count} tickets)`
+                }
+              </p>
+            </div>
+            
+            <div className="p-4 bg-purple-50 rounded-lg">
+              <h4 className="font-semibold text-purple-800 mb-2">Resolution Efficiency</h4>
+              <Badge variant={resolvedRate >= 80 ? "default" : resolvedRate >= 60 ? "secondary" : "destructive"}>
+                {resolvedRate >= 80 ? "Excellent" : resolvedRate >= 60 ? "Good" : "Needs Improvement"}
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
