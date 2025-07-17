@@ -4,6 +4,9 @@ import {
   signInWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged,
+  setPersistence,
+  browserSessionPersistence,
+  browserLocalPersistence,
   User as FirebaseUser
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -37,10 +40,15 @@ export const useFirebaseAuth = () => {
     return () => unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe: boolean = false) => {
     try {
       setLoading(true);
+      
+      // Set persistence based on remember me option
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+      
       await signInWithEmailAndPassword(auth, email, password);
+      
       toast({
         title: "Login Successful",
         description: "Welcome to the IT Performance Dashboard.",
