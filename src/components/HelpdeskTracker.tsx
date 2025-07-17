@@ -102,7 +102,6 @@ const HelpdeskTracker = ({ user }: HelpdeskTrackerProps) => {
   };
 
   const deleteTicket = async (id: string) => {
-    if (!confirm("Delete this ticket?")) return;
     try {
       await helpdeskService.deleteTicket(id);
       toast({
