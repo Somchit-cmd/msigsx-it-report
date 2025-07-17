@@ -99,7 +99,7 @@ const LoginPage = ({ onLogin, loading }: LoginPageProps) => {
                 </button>
               </div>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-3 columns-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="rememberMe"
@@ -108,10 +108,10 @@ const LoginPage = ({ onLogin, loading }: LoginPageProps) => {
                   disabled={loading}
                 />
                 <Label htmlFor="rememberMe" className="text-sm font-normal">
-                  Remember my email address
+                  Remember me
                 </Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 pl-6">
                 <Checkbox
                   id="stayLoggedIn"
                   checked={stayLoggedIn}

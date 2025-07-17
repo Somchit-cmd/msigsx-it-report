@@ -57,7 +57,8 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
     'Printing',
     'Email',
     'Permissions',
-    'Security'
+    'Security',
+    'Other'
   ];
 
   const ticketStatuses = [
@@ -73,7 +74,8 @@ const CreateTicketDialog = ({ user, onCreateTicket }: CreateTicketDialogProps) =
     'Non-Health Claims',
     'Legal and Compliance',
     'Sales and Marketing',
-    'Underwriting'
+    'Underwriting',
+    'Other'
   ];
 
   const priorities = [

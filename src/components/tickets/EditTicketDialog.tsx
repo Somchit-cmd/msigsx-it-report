@@ -76,6 +76,7 @@ const EditTicketDialog = ({ ticket, onUpdate }: EditTicketDialogProps) => {
     "Email",
     "Permissions",
     "Security",
+    "Other"
   ];
 
   const ticketStatuses = ["Opened", "Resolved", "Pending"];
@@ -87,7 +88,8 @@ const EditTicketDialog = ({ ticket, onUpdate }: EditTicketDialogProps) => {
     'Non-Health Claims',
     'Legal and Compliance',
     'Sales and Marketing',
-    'Underwriting'
+    'Underwriting',
+    'Other'
   ];
 
   const priorities = ["Low", "Medium", "High"];
