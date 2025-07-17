@@ -178,6 +178,11 @@ const HelpdeskTracker = ({ user }: HelpdeskTrackerProps) => {
     }
   };
 
+  // Filter tickets for the card view - only show Opened and Pending
+  const filteredTicketsForCards = tickets.filter(
+    (ticket) => ticket.ticketStatus === "Opened" || ticket.ticketStatus === "Pending"
+  );
+
   const ticketStats = {
     total: tickets.length,
     opened: tickets.filter((t) => t.ticketStatus === "Opened").length,
@@ -303,16 +308,16 @@ const HelpdeskTracker = ({ user }: HelpdeskTrackerProps) => {
         </TabsList>
 
         <TabsContent value="cards" className="space-y-4 mt-6">
-          {tickets.length === 0 ? (
+          {filteredTicketsForCards.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <p className="text-gray-500">
-                  No tickets found. Create your first ticket!
+                  No open or pending tickets found. All tickets are resolved!
                 </p>
               </CardContent>
             </Card>
           ) : (
-            tickets.map((ticket) => (
+            filteredTicketsForCards.map((ticket) => (
               <Card key={ticket.id}>
                 <CardContent className="p-4 sm:p-6">
                   <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 lg:gap-0">
