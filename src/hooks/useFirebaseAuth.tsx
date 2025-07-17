@@ -40,12 +40,12 @@ export const useFirebaseAuth = () => {
     return () => unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string, rememberMe: boolean = false) => {
+  const login = async (email: string, password: string, stayLoggedIn: boolean = false) => {
     try {
       setLoading(true);
       
-      // Set persistence based on remember me option
-      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+      // Set persistence based on stay logged in option
+      await setPersistence(auth, stayLoggedIn ? browserLocalPersistence : browserSessionPersistence);
       
       await signInWithEmailAndPassword(auth, email, password);
       

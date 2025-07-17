@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface LoginPageProps {
-  onLogin: (email: string, password: string, rememberMe: boolean) => Promise<void>;
+  onLogin: (email: string, password: string, stayLoggedIn: boolean) => Promise<void>;
   loading: boolean;
 }
 
@@ -19,11 +19,30 @@ const LoginPage = ({ onLogin, loading }: LoginPageProps) => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [stayLoggedIn, setStayLoggedIn] = useState(false);
+
+  // Load saved email on component mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    if (savedEmail) {
+      setFormData(prev => ({ ...prev, email: savedEmail }));
+      setRememberMe(true);
+    }
+  }, []);
+
+  // Save/remove email based on remember me option
+  useEffect(() => {
+    if (rememberMe && formData.email) {
+      localStorage.setItem('rememberedEmail', formData.email);
+    } else if (!rememberMe) {
+      localStorage.removeItem('rememberedEmail');
+    }
+  }, [rememberMe, formData.email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.email && formData.password) {
-      await onLogin(formData.email, formData.password, rememberMe);
+      await onLogin(formData.email, formData.password, stayLoggedIn);
     }
   };
 
@@ -80,16 +99,29 @@ const LoginPage = ({ onLogin, loading }: LoginPageProps) => {
                 </button>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="rememberMe"
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                disabled={loading}
-              />
-              <Label htmlFor="rememberMe" className="text-sm font-normal">
-                Remember me and stay logged in
-              </Label>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  disabled={loading}
+                />
+                <Label htmlFor="rememberMe" className="text-sm font-normal">
+                  Remember my email address
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="stayLoggedIn"
+                  checked={stayLoggedIn}
+                  onCheckedChange={(checked) => setStayLoggedIn(checked as boolean)}
+                  disabled={loading}
+                />
+                <Label htmlFor="stayLoggedIn" className="text-sm font-normal">
+                  Stay logged in
+                </Label>
+              </div>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
