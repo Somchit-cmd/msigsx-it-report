@@ -44,10 +44,16 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
     const loadData = async () => {
       try {
         setLoading(true);
+        
+        // Initialize sample data if needed
+        await uptimeService.initializeSampleData();
+        
+        // Now load the data
         const [uptimeRecords, downtimeIncidents] = await Promise.all([
           uptimeService.getUptimeRecords(),
           uptimeService.getDowntimeIncidents()
         ]);
+        
         setServers(uptimeRecords);
         setIncidents(downtimeIncidents);
       } catch (error) {
@@ -237,42 +243,99 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
       </div>
 
       {/* Server Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Server className="h-5 w-5" />
-            Server Uptime Status
-          </CardTitle>
-          <CardDescription>Current status and uptime percentage for all servers</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {servers.map((server) => (
-              <div key={server.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Server className="h-6 w-6 text-blue-600" />
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Server className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">Server Uptime Status</h2>
+        </div>
+        <p className="text-sm text-gray-600 -mt-2">Current status and uptime percentage for all servers</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {servers.map((server) => {
+            const formatLastChecked = (dateString: string) => {
+              const date = new Date(dateString);
+              const now = new Date();
+              const diffMs = now.getTime() - date.getTime();
+              const diffMinutes = Math.floor(diffMs / (1000 * 60));
+              
+              if (diffMinutes < 1) return 'Just now';
+              if (diffMinutes < 60) return `${diffMinutes}m ago`;
+              if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
+              return date.toLocaleDateString();
+            };
+
+            return (
+              <Card key={server.id} className="hover:shadow-lg transition-all duration-200 border-l-4 overflow-hidden ${
+                server.status === 'Online' ? 'border-green-500' :
+                server.status === 'Offline' ? 'border-red-500' :
+                'border-yellow-500'
+              }">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`p-2.5 rounded-lg ${
+                          server.status === 'Online' ? 'bg-green-50' :
+                          server.status === 'Offline' ? 'bg-red-50' :
+                          'bg-yellow-50'
+                        }`}>
+                          <Server className={`h-5 w-5 ${
+                            server.status === 'Online' ? 'text-green-600' :
+                            server.status === 'Offline' ? 'text-red-600' :
+                            'text-yellow-600'
+                          }`} />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-800 text-lg">{server.serverName}</h3>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <div className={`w-2 h-2 rounded-full ${
+                              server.status === 'Online' ? 'bg-green-500' :
+                              server.status === 'Offline' ? 'bg-red-500' :
+                              'bg-yellow-500'
+                            }`} />
+                            <span className="text-sm text-gray-500 capitalize">{server.status.toLowerCase()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="pl-1">
+                        <p className="text-xs text-gray-500">
+                          <span className="font-medium">Last checked:</span> {formatLastChecked(server.lastChecked)}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right">
+                      <div className="flex flex-col items-end">
+                        <div className={`text-3xl font-bold ${
+                          server.uptimePercentage >= 99.5 ? 'text-green-600' :
+                          server.uptimePercentage >= 95 ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`}>
+                          {server.uptimePercentage.toFixed(1)}%
+                        </div>
+                        <div className="text-xs font-medium text-gray-500 mt-1">Uptime (30d)</div>
+                        
+                        {/* Uptime progress bar */}
+                        <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden mt-2">
+                          <div 
+                            className={`h-full ${
+                              server.uptimePercentage >= 99.5 ? 'bg-green-500' :
+                              server.uptimePercentage >= 95 ? 'bg-yellow-500' :
+                              'bg-red-500'
+                            }`}
+                            style={{ width: `${Math.min(100, server.uptimePercentage)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold">{server.serverName}</h3>
-                    <p className="text-sm text-gray-600">Last checked: {server.lastChecked}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-green-600">{server.uptimePercentage}%</p>
-                    <p className="text-sm text-gray-600">Uptime</p>
-                  </div>
-                  <Badge className={getStatusColor(server.status)}>
-                    {getStatusIcon(server.status)}
-                    {server.status}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Downtime Incidents */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">

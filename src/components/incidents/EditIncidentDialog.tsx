@@ -71,16 +71,15 @@ const EditIncidentDialog = ({ incident, onUpdate }: EditIncidentDialogProps) => 
   };
 
   const serverOptions = [
-    'Web Server 1',
-    'Web Server 2', 
-    'Database Server',
-    'Email Server',
-    'File Server',
+    'Mail Server (Exchange)',
+    'Web Server (IIS)',
+    'Database Server (SQL)',
+    'File Server (NAS)',
+    'Domain Controller',
+    'Print Server',
     'Backup Server',
     'Application Server',
-    'Load Balancer',
-    'DNS Server',
-    'Monitoring Server'
+    'Other'
   ];
 
   const impactLevels = ["Low", "Medium", "High", "Critical"];
