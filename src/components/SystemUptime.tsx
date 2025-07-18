@@ -1,131 +1,146 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Server, AlertTriangle, CheckCircle, Clock, Activity } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Server, AlertTriangle, CheckCircle, Clock, Activity, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { uptimeService, UptimeRecord, DowntimeIncident } from '@/services/uptimeService';
+import CreateIncidentDialog from '@/components/incidents/CreateIncidentDialog';
+import IncidentsTable from '@/components/incidents/IncidentsTable';
+import IncidentsReportTab from '@/components/incidents/IncidentsReportTab';
+import EditIncidentDialog from '@/components/incidents/EditIncidentDialog';
+import ConfirmDialog from '@/components/tickets/ConfirmDialog';
 
-interface UptimeRecord {
-  id: string;
-  serverName: string;
-  uptimePercentage: number;
-  lastChecked: string;
-  status: 'Online' | 'Offline' | 'Maintenance';
+interface AuthUser {
+  uid: string;
+  email: string;
+  name: string;
 }
 
-interface DowntimeIncident {
-  id: string;
-  serverName: string;
-  startTime: string;
-  endTime?: string;
-  duration: string;
-  cause: string;
-  resolution: string;
-  impact: 'Low' | 'Medium' | 'High' | 'Critical';
+interface SystemUptimeProps {
+  user: AuthUser;
 }
 
-const SystemUptime = () => {
+
+
+const SystemUptime = ({ user }: SystemUptimeProps) => {
   const { toast } = useToast();
   
-  const [servers] = useState<UptimeRecord[]>([
-    {
-      id: '1',
-      serverName: 'Mail Server (Exchange)',
-      uptimePercentage: 99.8,
-      lastChecked: '2024-07-10 14:30:00',
-      status: 'Online',
-    },
-    {
-      id: '2',
-      serverName: 'Web Server (IIS)',
-      uptimePercentage: 99.9,
-      lastChecked: '2024-07-10 14:30:00',
-      status: 'Online',
-    },
-    {
-      id: '3',
-      serverName: 'Database Server (SQL)',
-      uptimePercentage: 100.0,
-      lastChecked: '2024-07-10 14:30:00',
-      status: 'Online',
-    },
-    {
-      id: '4',
-      serverName: 'File Server (NAS)',
-      uptimePercentage: 99.5,
-      lastChecked: '2024-07-10 14:30:00',
-      status: 'Maintenance',
-    },
-  ]);
+  const [servers, setServers] = useState<UptimeRecord[]>([]);
+  const [incidents, setIncidents] = useState<DowntimeIncident[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [incidentToDelete, setIncidentToDelete] = useState<string | null>(null);
 
-  const [incidents, setIncidents] = useState<DowntimeIncident[]>([
-    {
-      id: '1',
-      serverName: 'Mail Server (Exchange)',
-      startTime: '2024-07-05 09:15:00',
-      endTime: '2024-07-05 10:30:00',
-      duration: '1h 15m',
-      cause: 'Power outage in server room',
-      resolution: 'UPS battery replaced, backup power system tested',
-      impact: 'High',
-    },
-    {
-      id: '2',
-      serverName: 'File Server (NAS)',
-      startTime: '2024-07-08 22:00:00',
-      endTime: '2024-07-09 02:00:00',
-      duration: '4h 0m',
-      cause: 'Scheduled maintenance - RAID rebuild',
-      resolution: 'RAID array successfully rebuilt, performance optimized',
-      impact: 'Low',
-    },
-  ]);
+  // Load data from database
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-  const [showIncidentForm, setShowIncidentForm] = useState(false);
-  const [incidentForm, setIncidentForm] = useState({
-    serverName: '',
-    startTime: '',
-    endTime: '',
-    cause: '',
-    resolution: '',
-    impact: 'Medium' as const,
-  });
-
-  const handleIncidentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const startDate = new Date(incidentForm.startTime);
-    const endDate = new Date(incidentForm.endTime);
-    const durationMs = endDate.getTime() - startDate.getTime();
-    const hours = Math.floor(durationMs / (1000 * 60 * 60));
-    const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    const newIncident: DowntimeIncident = {
-      id: Date.now().toString(),
-      ...incidentForm,
-      duration: `${hours}h ${minutes}m`,
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [uptimeRecords, downtimeIncidents] = await Promise.all([
+          uptimeService.getUptimeRecords(),
+          uptimeService.getDowntimeIncidents()
+        ]);
+        setServers(uptimeRecords);
+        setIncidents(downtimeIncidents);
+      } catch (error) {
+        console.error('Error loading uptime data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load uptime data from database. Please check your permissions.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
     };
-    
-    setIncidents([newIncident, ...incidents]);
-    setIncidentForm({
-      serverName: '',
-      startTime: '',
-      endTime: '',
-      cause: '',
-      resolution: '',
-      impact: 'Medium',
+
+    loadData();
+
+    // Set up real-time subscriptions
+    const unsubscribeUptime = uptimeService.subscribeToUptimeRecords((records) => {
+      setServers(records);
     });
-    setShowIncidentForm(false);
-    
-    toast({
-      title: "Incident Logged",
-      description: "Downtime incident has been recorded successfully.",
+
+    const unsubscribeIncidents = uptimeService.subscribeToIncidents((incidents) => {
+      setIncidents(incidents);
     });
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      unsubscribeUptime();
+      unsubscribeIncidents();
+    };
+  }, [user, toast]);
+
+  const handleCreateIncident = async (incidentData: any) => {
+    await uptimeService.createIncident(incidentData);
+  };
+
+  const handleEditIncident = async (incidentId: string, updated: Partial<Omit<DowntimeIncident, 'id' | 'createdAt'>>) => {
+    try {
+      await uptimeService.updateIncident(incidentId, updated);
+      toast({
+        title: "Incident Updated",
+        description: "The incident has been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Error updating incident:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update incident. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const handleDeleteIncident = async (incidentId: string) => {
+    try {
+      await uptimeService.deleteIncident(incidentId);
+      toast({
+        title: "Incident Deleted",
+        description: "The incident has been deleted successfully.",
+      });
+    } catch (error) {
+      console.error('Error deleting incident:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete incident. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const handleDeleteClick = (incidentId: string) => {
+    setIncidentToDelete(incidentId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (incidentToDelete) {
+      try {
+        await handleDeleteIncident(incidentToDelete);
+      } catch (error) {
+        // Error already handled in handleDeleteIncident
+      } finally {
+        setDeleteDialogOpen(false);
+        setIncidentToDelete(null);
+      }
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setIncidentToDelete(null);
   };
 
   const getStatusColor = (status: string) => {
@@ -156,7 +171,16 @@ const SystemUptime = () => {
     }
   };
 
-  const overallUptime = servers.reduce((sum, server) => sum + server.uptimePercentage, 0) / servers.length;
+  const overallUptime = servers.length > 0 ? servers.reduce((sum, server) => sum + server.uptimePercentage, 0) / servers.length : 0;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-2 text-gray-600">Loading uptime data...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -253,130 +277,97 @@ const SystemUptime = () => {
       {/* Downtime Incidents */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
         <h2 className="text-lg sm:text-xl font-semibold">Downtime Incidents</h2>
-        <Button onClick={() => setShowIncidentForm(!showIncidentForm)} className="flex items-center gap-2 w-full sm:w-auto">
-          <Plus className="h-4 w-4" />
-          Log Incident
-        </Button>
+        <CreateIncidentDialog user={user} onCreateIncident={handleCreateIncident} />
       </div>
 
-      {/* Incident Form */}
-      {showIncidentForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Log Downtime Incident</CardTitle>
-            <CardDescription>Record a server downtime incident with details</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleIncidentSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="serverName">Server Name</Label>
-                  <Input
-                    id="serverName"
-                    value={incidentForm.serverName}
-                    onChange={(e) => setIncidentForm({...incidentForm, serverName: e.target.value})}
-                    placeholder="e.g., Mail Server (Exchange)"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="impact">Impact Level</Label>
-                  <Select value={incidentForm.impact} onValueChange={(value) => setIncidentForm({...incidentForm, impact: value as any})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Low">Low</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="High">High</SelectItem>
-                      <SelectItem value="Critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="startTime">Start Time</Label>
-                  <Input
-                    id="startTime"
-                    type="datetime-local"
-                    value={incidentForm.startTime}
-                    onChange={(e) => setIncidentForm({...incidentForm, startTime: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endTime">End Time</Label>
-                  <Input
-                    id="endTime"
-                    type="datetime-local"
-                    value={incidentForm.endTime}
-                    onChange={(e) => setIncidentForm({...incidentForm, endTime: e.target.value})}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cause">Cause</Label>
-                <Textarea
-                  id="cause"
-                  value={incidentForm.cause}
-                  onChange={(e) => setIncidentForm({...incidentForm, cause: e.target.value})}
-                  placeholder="What caused the downtime?"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="resolution">Resolution</Label>
-                <Textarea
-                  id="resolution"
-                  value={incidentForm.resolution}
-                  onChange={(e) => setIncidentForm({...incidentForm, resolution: e.target.value})}
-                  placeholder="How was the issue resolved?"
-                  required
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit">Log Incident</Button>
-                <Button type="button" variant="outline" onClick={() => setShowIncidentForm(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+      {/* Incidents Tabs */}
+      <Tabs defaultValue="cards" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 max-w-lg">
+          <TabsTrigger value="cards">Incident List</TabsTrigger>
+          <TabsTrigger value="table" className="hidden md:block">Incident Table</TabsTrigger>
+          <TabsTrigger value="report">Incident Report</TabsTrigger>
+        </TabsList>
 
-      {/* Incidents List */}
-      <div className="space-y-4">
-        {incidents.map((incident) => (
-          <Card key={incident.id}>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-semibold">{incident.serverName}</h3>
-                    <Badge className={getImpactColor(incident.impact)}>
-                      {incident.impact} Impact
-                    </Badge>
-                    <Badge variant="outline">{incident.duration}</Badge>
+        <TabsContent value="cards" className="space-y-4 mt-6">
+          {incidents.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Server className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No downtime incidents recorded.</p>
+                <p className="text-sm text-gray-400 mt-2">All systems are running smoothly!</p>
+              </CardContent>
+            </Card>
+          ) : (
+            incidents.map((incident) => (
+              <Card key={incident.id}>
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-semibold">{incident.serverName}</h3>
+                        <Badge className={getImpactColor(incident.impact)}>
+                          {incident.impact} Impact
+                        </Badge>
+                        <Badge variant="outline">{incident.duration}</Badge>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <p><strong>Period:</strong> {incident.startTime} - {incident.endTime}</p>
+                        <p><strong>Cause:</strong> {incident.cause}</p>
+                        <p><strong>Resolution:</strong> {incident.resolution}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-3">
+                      <div className="text-right">
+                        <AlertTriangle className="h-6 w-6 text-orange-500 mb-2" />
+                        <p className="text-sm text-gray-600">Duration</p>
+                        <p className="font-semibold">{incident.duration}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <EditIncidentDialog
+                          incident={incident}
+                          onUpdate={(updated) => handleEditIncident(incident.id!, updated)}
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleDeleteClick(incident.id!)}
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                          title="Delete Incident"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2 text-sm">
-                    <p><strong>Period:</strong> {incident.startTime} - {incident.endTime}</p>
-                    <p><strong>Cause:</strong> {incident.cause}</p>
-                    <p><strong>Resolution:</strong> {incident.resolution}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <AlertTriangle className="h-6 w-6 text-orange-500 mb-2" />
-                  <p className="text-sm text-gray-600">Duration</p>
-                  <p className="font-semibold">{incident.duration}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="table" className="mt-6">
+          <IncidentsTable 
+            incidents={incidents} 
+            onEditIncident={handleEditIncident}
+            onDeleteIncident={handleDeleteIncident}
+          />
+        </TabsContent>
+
+        <TabsContent value="report" className="mt-6">
+          <IncidentsReportTab incidents={incidents} servers={servers} />
+        </TabsContent>
+      </Tabs>
+      
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title="Delete Incident?"
+        description="Are you sure you want to delete this incident? This action cannot be undone."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        danger
+      />
     </div>
   );
 };

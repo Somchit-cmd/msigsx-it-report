@@ -50,7 +50,7 @@ const Index = () => {
       case 'helpdesk':
         return <HelpdeskTracker user={user} />;
       case 'uptime':
-        return <SystemUptime />;
+        return <SystemUptime user={user} />;
       case 'security':
         return <SecurityCompliance />;
       case 'assets':
