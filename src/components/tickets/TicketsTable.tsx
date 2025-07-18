@@ -229,8 +229,8 @@ const TicketsTable = ({
               <TableHead>Date</TableHead>
               <TableHead>IT Staff</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>Issue</TableHead>
-              <TableHead>Resolution</TableHead>
+              <TableHead className="w-[20%]">Issue</TableHead>
+              <TableHead className="w-[20%]">Resolution</TableHead>
               <TableHead>Time</TableHead>
               <TableHead>Department</TableHead>
               <TableHead>Employee</TableHead>
@@ -272,20 +272,32 @@ const TicketsTable = ({
                   <TableCell>
                     <Badge variant="outline">{ticket.issueCategory}</Badge>
                   </TableCell>
-                  <TableCell>
-                    <div className="max-w-xs">
+                  <TableCell className="w-[20%]">
+                    <div className="max-w-[200px]">
                       <div
-                        className="text-sm font-medium truncate"
+                        className="text-sm font-medium leading-tight line-clamp-2"
+                        style={{ 
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}
                         title={ticket.specificIssue}
                       >
                         {ticket.specificIssue}
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="max-w-xs">
+                  <TableCell className="w-[20%]">
+                    <div className="max-w-[200px]">
                       <div
-                        className="text-sm truncate"
+                        className="text-sm leading-tight line-clamp-2"
+                        style={{ 
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}
                         title={ticket.resolutionAction}
                       >
                         {ticket.resolutionAction}

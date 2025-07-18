@@ -75,10 +75,14 @@ export function AppSidebar({ activeTab, setActiveTab, user, onLogout }: AppSideb
 
   return (
     <Sidebar className="border-r bg-white" collapsible="icon">
-      <SidebarHeader className="p-6 border-b">
-        <div className="flex items-center gap-3">
-          <div className="p-1.5 rounded-lg flex-shrink-0">
-            <img src="assets/msigsx_it_dev.png" alt="MSIGSX IT" className="h-12 w-12" />
+      <SidebarHeader className={`border-b ${isCollapsed ? 'p-4' : 'p-6'}`}>
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
+          <div className={`rounded-lg flex-shrink-0 ${isCollapsed ? 'p-1' : 'p-1.5'}`}>
+            <img 
+              src="assets/msigsx_it_dev.png" 
+              alt="MSIGSX IT" 
+              className={`${isCollapsed ? 'h-10 w-10' : 'h-12 w-12'} transition-all duration-200`} 
+            />
           </div>
           {!isCollapsed && (
             <div className="flex flex-col min-w-0">
@@ -126,8 +130,9 @@ export function AppSidebar({ activeTab, setActiveTab, user, onLogout }: AppSideb
         </SidebarGroup>
       </SidebarContent>
 
+      <SidebarTrigger className="absolute -right-3 top-1/2 rounded-full bg-background" />
       {user && (
-        <SidebarFooter className="p-6 border-t bg-gray-50/50">
+        <SidebarFooter className="p-4 border-t sticky bottom-0 bg-background z-10">
           {!isCollapsed ? (
             <div className="space-y-4">
               <div className="text-center space-y-1">
