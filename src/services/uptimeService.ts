@@ -1,3 +1,4 @@
+
 import { 
   collection,
   addDoc,
@@ -8,7 +9,9 @@ import {
   query,
   orderBy,
   onSnapshot,
-  Timestamp 
+  Timestamp,
+  where,
+  limit
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -38,6 +41,48 @@ export interface DowntimeIncident {
 const UPTIME_COLLECTION = 'system_uptime';
 const INCIDENTS_COLLECTION = 'downtime_incidents';
 
+// Calculate uptime percentage based on incidents in the last 30 days
+const calculateUptimePercentage = (incidents: DowntimeIncident[], serverName: string): number => {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  // Filter incidents for this server in the last 30 days
+  const recentIncidents = incidents.filter(incident => 
+    incident.serverName === serverName && 
+    new Date(incident.startTime) >= thirtyDaysAgo
+  );
+  
+  if (recentIncidents.length === 0) {
+    return 100.0; // No incidents = 100% uptime
+  }
+  
+  // Calculate total downtime in minutes
+  let totalDowntimeMinutes = 0;
+  recentIncidents.forEach(incident => {
+    const durationParts = incident.duration.split(/[hm\s]/).filter(part => part.length > 0);
+    let hours = 0;
+    let minutes = 0;
+    
+    if (durationParts.length >= 2) {
+      hours = parseInt(durationParts[0]) || 0;
+      minutes = parseInt(durationParts[1]) || 0;
+    } else if (incident.duration.includes('h')) {
+      hours = parseInt(durationParts[0]) || 0;
+    } else if (incident.duration.includes('m')) {
+      minutes = parseInt(durationParts[0]) || 0;
+    }
+    
+    totalDowntimeMinutes += (hours * 60) + minutes;
+  });
+  
+  // Calculate uptime percentage (30 days = 43,200 minutes)
+  const totalMinutesInMonth = 30 * 24 * 60;
+  const uptimeMinutes = totalMinutesInMonth - totalDowntimeMinutes;
+  const uptimePercentage = (uptimeMinutes / totalMinutesInMonth) * 100;
+  
+  return Math.max(0, Math.min(100, Math.round(uptimePercentage * 10) / 10));
+};
+
 export const uptimeService = {
   // Initialize sample server data if collection is empty
   async initializeSampleData() {
@@ -53,19 +98,19 @@ export const uptimeService = {
         {
           serverName: 'Database Server',
           uptimePercentage: 99.8,
-          lastChecked: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 minutes ago
+          lastChecked: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
           status: 'Online'
         },
         {
           serverName: 'Email Server',
           uptimePercentage: 99.5,
-          lastChecked: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15 minutes ago
+          lastChecked: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
           status: 'Maintenance'
         },
         {
           serverName: 'File Server',
           uptimePercentage: 95.2,
-          lastChecked: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+          lastChecked: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
           status: 'Offline'
         }
       ];
@@ -88,31 +133,70 @@ export const uptimeService = {
     }
   },
 
-  // Get all uptime records
+  // Get all uptime records with calculated uptime percentages
   async getUptimeRecords(): Promise<UptimeRecord[]> {
     try {
       const q = query(collection(db, UPTIME_COLLECTION), orderBy('serverName', 'asc'));
       const querySnapshot = await getDocs(q);
       
-      // If no servers found, initialize sample data
       if (querySnapshot.empty) {
         await this.initializeSampleData();
-        // Get the data again after initialization
         const newSnapshot = await getDocs(q);
-        return newSnapshot.docs.map(doc => ({
+        const servers = newSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as UptimeRecord[];
+        
+        // Get incidents and recalculate uptime
+        const incidents = await this.getDowntimeIncidents();
+        return await this.updateUptimeCalculations(servers, incidents);
       }
       
-      return querySnapshot.docs.map(doc => ({
+      const servers = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as UptimeRecord[];
+      
+      // Get incidents and recalculate uptime
+      const incidents = await this.getDowntimeIncidents();
+      return await this.updateUptimeCalculations(servers, incidents);
     } catch (error) {
       console.error('Error fetching uptime records:', error);
       throw error;
     }
+  },
+
+  // Update uptime calculations based on incidents
+  async updateUptimeCalculations(servers: UptimeRecord[], incidents: DowntimeIncident[]): Promise<UptimeRecord[]> {
+    const updatedServers = [];
+    
+    for (const server of servers) {
+      const calculatedUptime = calculateUptimePercentage(incidents, server.serverName);
+      
+      // Update server if uptime percentage changed significantly
+      if (Math.abs(server.uptimePercentage - calculatedUptime) > 0.1) {
+        const updatedServer = {
+          ...server,
+          uptimePercentage: calculatedUptime,
+          lastChecked: new Date().toISOString()
+        };
+        
+        // Update in database
+        if (server.id) {
+          await updateDoc(doc(db, UPTIME_COLLECTION, server.id), {
+            uptimePercentage: calculatedUptime,
+            lastChecked: updatedServer.lastChecked,
+            updatedAt: Timestamp.now()
+          });
+        }
+        
+        updatedServers.push(updatedServer);
+      } else {
+        updatedServers.push(server);
+      }
+    }
+    
+    return updatedServers;
   },
 
   // Create or update uptime record
@@ -187,16 +271,41 @@ export const uptimeService = {
     }
   },
 
+  // Get incidents by date range for reporting
+  async getIncidentsByDateRange(startDate: Date, endDate: Date): Promise<DowntimeIncident[]> {
+    try {
+      const q = query(
+        collection(db, INCIDENTS_COLLECTION),
+        where('startTime', '>=', startDate.toISOString()),
+        where('startTime', '<=', endDate.toISOString()),
+        orderBy('startTime', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as DowntimeIncident[];
+    } catch (error) {
+      console.error('Error fetching incidents by date range:', error);
+      throw error;
+    }
+  },
+
   // Subscribe to real-time uptime updates
   subscribeToUptimeRecords(callback: (records: UptimeRecord[]) => void): () => void {
     const q = query(collection(db, UPTIME_COLLECTION), orderBy('serverName', 'asc'));
     
-    return onSnapshot(q, (querySnapshot) => {
+    return onSnapshot(q, async (querySnapshot) => {
       const records = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as UptimeRecord[];
-      callback(records);
+      
+      // Get incidents and recalculate uptime
+      const incidents = await this.getDowntimeIncidents();
+      const updatedRecords = await this.updateUptimeCalculations(records, incidents);
+      callback(updatedRecords);
     });
   },
 

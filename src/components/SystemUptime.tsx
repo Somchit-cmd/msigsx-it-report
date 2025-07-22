@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Server, AlertTriangle, CheckCircle, Clock, Activity, Pencil, Trash2 } from 'lucide-react';
+import { Server, AlertTriangle, CheckCircle, Clock, Activity, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { uptimeService, UptimeRecord, DowntimeIncident } from '@/services/uptimeService';
 import CreateIncidentDialog from '@/components/incidents/CreateIncidentDialog';
@@ -23,14 +22,13 @@ interface SystemUptimeProps {
   user: AuthUser;
 }
 
-
-
 const SystemUptime = ({ user }: SystemUptimeProps) => {
   const { toast } = useToast();
   
   const [servers, setServers] = useState<UptimeRecord[]>([]);
   const [incidents, setIncidents] = useState<DowntimeIncident[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [incidentToDelete, setIncidentToDelete] = useState<string | null>(null);
 
@@ -48,7 +46,7 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
         // Initialize sample data if needed
         await uptimeService.initializeSampleData();
         
-        // Now load the data
+        // Load the data with calculated uptime percentages
         const [uptimeRecords, downtimeIncidents] = await Promise.all([
           uptimeService.getUptimeRecords(),
           uptimeService.getDowntimeIncidents()
@@ -56,6 +54,8 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
         
         setServers(uptimeRecords);
         setIncidents(downtimeIncidents);
+        
+        console.log('Loaded uptime data:', { servers: uptimeRecords.length, incidents: downtimeIncidents.length });
       } catch (error) {
         console.error('Error loading uptime data:', error);
         toast({
@@ -72,10 +72,12 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
 
     // Set up real-time subscriptions
     const unsubscribeUptime = uptimeService.subscribeToUptimeRecords((records) => {
+      console.log('Real-time uptime update:', records.length);
       setServers(records);
     });
 
     const unsubscribeIncidents = uptimeService.subscribeToIncidents((incidents) => {
+      console.log('Real-time incidents update:', incidents.length);
       setIncidents(incidents);
     });
 
@@ -86,8 +88,48 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
     };
   }, [user, toast]);
 
+  const handleRefreshData = async () => {
+    setRefreshing(true);
+    try {
+      const [uptimeRecords, downtimeIncidents] = await Promise.all([
+        uptimeService.getUptimeRecords(),
+        uptimeService.getDowntimeIncidents()
+      ]);
+      
+      setServers(uptimeRecords);
+      setIncidents(downtimeIncidents);
+      
+      toast({
+        title: "Data Refreshed",
+        description: "Uptime data has been refreshed with latest calculations.",
+      });
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh uptime data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleCreateIncident = async (incidentData: any) => {
-    await uptimeService.createIncident(incidentData);
+    try {
+      await uptimeService.createIncident(incidentData);
+      toast({
+        title: "Incident Created",
+        description: "Downtime incident has been logged successfully. Uptime calculations will be updated automatically.",
+      });
+    } catch (error) {
+      console.error('Error creating incident:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create incident. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEditIncident = async (incidentId: string, updated: Partial<Omit<DowntimeIncident, 'id' | 'createdAt'>>) => {
@@ -95,7 +137,7 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
       await uptimeService.updateIncident(incidentId, updated);
       toast({
         title: "Incident Updated",
-        description: "The incident has been updated successfully.",
+        description: "The incident has been updated successfully. Uptime calculations will be recalculated.",
       });
     } catch (error) {
       console.error('Error updating incident:', error);
@@ -113,7 +155,7 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
       await uptimeService.deleteIncident(incidentId);
       toast({
         title: "Incident Deleted",
-        description: "The incident has been deleted successfully.",
+        description: "The incident has been deleted successfully. Uptime percentages will be recalculated.",
       });
     } catch (error) {
       console.error('Error deleting incident:', error);
@@ -244,11 +286,23 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
 
       {/* Server Status */}
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Server className="h-5 w-5" />
-          <h2 className="text-lg font-semibold">Server Uptime Status</h2>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Server className="h-5 w-5" />
+            <h2 className="text-lg font-semibold">Server Uptime Status</h2>
+          </div>
+          <Button 
+            onClick={handleRefreshData} 
+            disabled={refreshing}
+            variant="outline" 
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh Data'}
+          </Button>
         </div>
-        <p className="text-sm text-gray-600 -mt-2">Current status and uptime percentage for all servers</p>
+        <p className="text-sm text-gray-600 -mt-2">Current status and calculated uptime percentage for all servers (based on incidents in last 30 days)</p>
         
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {servers.map((server) => {
@@ -265,11 +319,11 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
             };
 
             return (
-              <Card key={server.id} className="hover:shadow-lg transition-all duration-200 border-l-4 overflow-hidden ${
+              <Card key={server.id} className={`hover:shadow-lg transition-all duration-200 border-l-4 overflow-hidden ${
                 server.status === 'Online' ? 'border-green-500' :
                 server.status === 'Offline' ? 'border-red-500' :
                 'border-yellow-500'
-              }">
+              }`}>
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
@@ -339,7 +393,7 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
 
       {/* Downtime Incidents */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
-        <h2 className="text-lg sm:text-xl font-semibold">Downtime Incidents</h2>
+        <h2 className="text-lg sm:text-xl font-semibold">Downtime Incidents Management</h2>
         <CreateIncidentDialog user={user} onCreateIncident={handleCreateIncident} />
       </div>
 
@@ -348,7 +402,7 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 max-w-lg">
           <TabsTrigger value="cards">Incident List</TabsTrigger>
           <TabsTrigger value="table" className="hidden md:block">Incident Table</TabsTrigger>
-          <TabsTrigger value="report">Incident Report</TabsTrigger>
+          <TabsTrigger value="report">Incident Reports</TabsTrigger>
         </TabsList>
 
         <TabsContent value="cards" className="space-y-4 mt-6">
@@ -357,7 +411,7 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
               <CardContent className="p-8 text-center">
                 <Server className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-500">No downtime incidents recorded.</p>
-                <p className="text-sm text-gray-400 mt-2">All systems are running smoothly!</p>
+                <p className="text-sm text-gray-400 mt-2">All systems are running smoothly! Uptime will be calculated as 100%.</p>
               </CardContent>
             </Card>
           ) : (
@@ -424,7 +478,7 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
       <ConfirmDialog
         open={deleteDialogOpen}
         title="Delete Incident?"
-        description="Are you sure you want to delete this incident? This action cannot be undone."
+        description="Are you sure you want to delete this incident? This action cannot be undone and will affect uptime calculations."
         confirmText="Yes, Delete"
         cancelText="Cancel"
         onConfirm={handleDeleteConfirm}
