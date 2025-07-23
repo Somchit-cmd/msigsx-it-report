@@ -42,15 +42,14 @@ const CreateIncidentDialog = ({ user, onCreateIncident }: CreateIncidentDialogPr
   });
 
   const serverNames = [
-    'Mail Server (Exchange)',
-    'Web Server (IIS)',
-    'Database Server (SQL)',
-    'File Server (NAS)',
+    'Mail Server',
+    'Web Server',
+    'Database Server',
+    'File Server',
     'Domain Controller',
     'Print Server',
     'Backup Server',
     'Application Server',
-    'Other'
   ];
 
   const impactLevels = [

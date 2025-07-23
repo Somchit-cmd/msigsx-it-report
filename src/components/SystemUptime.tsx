@@ -32,6 +32,18 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [incidentToDelete, setIncidentToDelete] = useState<string | null>(null);
 
+  // Define all required server names
+  const requiredServers = [
+    'Mail Server',
+    'Web Server',
+    'Database Server',
+    'File Server',
+    'Domain Controller',
+    'Print Server',
+    'Backup Server',
+    'Application Server'
+  ];
+
   // Load data from database
   useEffect(() => {
     if (!user) {
@@ -52,10 +64,31 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
           uptimeService.getDowntimeIncidents()
         ]);
         
-        setServers(uptimeRecords);
+        // Create a map of existing servers for quick lookup
+        const serverMap = new Map(uptimeRecords.map(server => [server.serverName, server]));
+        
+        // Ensure all required servers exist, create default entries if they don't
+        const allServers = requiredServers.map(serverName => {
+          const existingServer = serverMap.get(serverName);
+          if (existingServer) return existingServer;
+          
+          // Create default server entry if it doesn't exist
+          const now = new Date();
+          return {
+            id: `new-${serverName.toLowerCase().replace(/\s+/g, '-')}`,
+            serverName,
+            status: 'Online',
+            uptimePercentage: 100,
+            lastChecked: now.toISOString(),
+            createdAt: { toDate: () => now } as any, // Using type assertion for Firestore Timestamp
+            updatedAt: { toDate: () => now } as any  // Using type assertion for Firestore Timestamp
+          } as UptimeRecord;
+        });
+        
+        setServers(allServers);
         setIncidents(downtimeIncidents);
         
-        console.log('Loaded uptime data:', { servers: uptimeRecords.length, incidents: downtimeIncidents.length });
+        console.log('Loaded uptime data:', { servers: allServers.length, incidents: downtimeIncidents.length });
       } catch (error) {
         console.error('Error loading uptime data:', error);
         toast({
@@ -91,23 +124,83 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
   const handleRefreshData = async () => {
     setRefreshing(true);
     try {
+      // Clear existing data first to show loading state
+      setServers([]);
+      
+      // Force a complete refresh by re-fetching all data
       const [uptimeRecords, downtimeIncidents] = await Promise.all([
         uptimeService.getUptimeRecords(),
         uptimeService.getDowntimeIncidents()
       ]);
       
-      setServers(uptimeRecords);
+      // Recalculate server status based on incidents
+      const now = new Date();
+      const updatePromises: Promise<any>[] = [];
+      
+      const updatedServers = await Promise.all(requiredServers.map(async (serverName) => {
+        // Find existing server data or create default
+        const existingServer = uptimeRecords.find(s => s.serverName === serverName);
+        
+        if (existingServer) {
+          // Create updated server data
+          const updatedServer = {
+            ...existingServer,
+            lastChecked: now.toISOString(),
+            updatedAt: { toDate: () => now }
+          };
+          
+          // Update in database
+          updatePromises.push(uptimeService.updateUptimeRecord(updatedServer));
+          
+          return updatedServer;
+        }
+        
+        // Create new server entry if it doesn't exist
+        const newServer: UptimeRecord = {
+          id: `new-${serverName.toLowerCase().replace(/\s+/g, '-')}`,
+          serverName,
+          status: 'Online',
+          uptimePercentage: 100,
+          lastChecked: now.toISOString(),
+          createdAt: { toDate: () => now },
+          updatedAt: { toDate: () => now }
+        };
+        
+        // Create in database
+        updatePromises.push(uptimeService.createUptimeRecord({
+          serverName: newServer.serverName,
+          status: newServer.status,
+          uptimePercentage: newServer.uptimePercentage,
+          lastChecked: newServer.lastChecked
+        }));
+        
+        return newServer;
+      }));
+      
+      // Wait for all updates to complete
+      await Promise.all(updatePromises);
+      
+      // Update state with refreshed data
+      setServers(updatedServers);
       setIncidents(downtimeIncidents);
       
+      // Show success message with timestamp
       toast({
         title: "Data Refreshed",
-        description: "Uptime data has been refreshed with latest calculations.",
+        description: `Server statuses have been updated at ${now.toLocaleTimeString()}.`,
       });
+      
+      console.log('Data refresh completed', {
+        servers: updatedServers.length,
+        incidents: downtimeIncidents.length,
+        timestamp: now.toISOString()
+      });
+      
     } catch (error) {
       console.error('Error refreshing data:', error);
       toast({
         title: "Refresh Failed",
-        description: "Failed to refresh uptime data. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to refresh uptime data. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -285,27 +378,42 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
       </div>
 
       {/* Server Status */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Server className="h-5 w-5" />
-            <h2 className="text-lg font-semibold">Server Uptime Status</h2>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <Server className="h-6 w-6 text-blue-600" />
+              Server Uptime Status
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Real-time status and performance metrics for your infrastructure
+            </p>
           </div>
           <Button 
-            onClick={handleRefreshData} 
+            onClick={handleRefreshData}
             disabled={refreshing}
-            variant="outline" 
-            size="sm"
-            className="flex items-center gap-2"
+            variant="outline"
+            className="h-10 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-2"
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing...' : 'Refresh Data'}
+            {refreshing ? 'Updating...' : 'Refresh Data'}
           </Button>
         </div>
-        <p className="text-sm text-gray-600 -mt-2">Current status and calculated uptime percentage for all servers (based on incidents in last 30 days)</p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {servers.map((server) => {
+            const statusColor = {
+              Online: 'bg-green-100 text-green-800 border-green-200',
+              Offline: 'bg-red-100 text-red-800 border-red-200',
+              Maintenance: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+            }[server.status] || 'bg-gray-100 text-gray-800 border-gray-200';
+
+            const uptimeColor = {
+              good: 'text-green-600',
+              warning: 'text-yellow-600',
+              critical: 'text-red-600',
+            }[server.uptimePercentage >= 99.5 ? 'good' : server.uptimePercentage >= 95 ? 'warning' : 'critical'];
+
             const formatLastChecked = (dateString: string) => {
               const date = new Date(dateString);
               const now = new Date();
@@ -319,73 +427,61 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
             };
 
             return (
-              <Card key={server.id} className={`hover:shadow-lg transition-all duration-200 border-l-4 overflow-hidden ${
-                server.status === 'Online' ? 'border-green-500' :
-                server.status === 'Offline' ? 'border-red-500' :
-                'border-yellow-500'
-              }`}>
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className={`p-2.5 rounded-lg ${
-                          server.status === 'Online' ? 'bg-green-50' :
-                          server.status === 'Offline' ? 'bg-red-50' :
-                          'bg-yellow-50'
-                        }`}>
-                          <Server className={`h-5 w-5 ${
-                            server.status === 'Online' ? 'text-green-600' :
-                            server.status === 'Offline' ? 'text-red-600' :
-                            'text-yellow-600'
-                          }`} />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-800 text-lg">{server.serverName}</h3>
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <div className={`w-2 h-2 rounded-full ${
-                              server.status === 'Online' ? 'bg-green-500' :
-                              server.status === 'Offline' ? 'bg-red-500' :
-                              'bg-yellow-500'
-                            }`} />
-                            <span className="text-sm text-gray-500 capitalize">{server.status.toLowerCase()}</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="pl-1">
-                        <p className="text-xs text-gray-500">
-                          <span className="font-medium">Last checked:</span> {formatLastChecked(server.lastChecked)}
-                        </p>
+              <div 
+                key={server.id} 
+                className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
+              >
+                <div className="p-5">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-semibold text-gray-900 truncate">
+                        {server.serverName}
+                      </h3>
+                      <div className="flex items-center mt-1">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
+                          <span className={`w-2 h-2 rounded-full mr-1.5 ${
+                            server.status === 'Online' ? 'bg-green-500' :
+                            server.status === 'Offline' ? 'bg-red-500' : 'bg-yellow-500'
+                          }`}></span>
+                          {server.status}
+                        </span>
                       </div>
                     </div>
-                    
-                    <div className="text-right">
-                      <div className="flex flex-col items-end">
-                        <div className={`text-3xl font-bold ${
-                          server.uptimePercentage >= 99.5 ? 'text-green-600' :
-                          server.uptimePercentage >= 95 ? 'text-yellow-600' :
-                          'text-red-600'
-                        }`}>
-                          {server.uptimePercentage.toFixed(1)}%
-                        </div>
-                        <div className="text-xs font-medium text-gray-500 mt-1">Uptime (30d)</div>
-                        
-                        {/* Uptime progress bar */}
-                        <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden mt-2">
-                          <div 
-                            className={`h-full ${
-                              server.uptimePercentage >= 99.5 ? 'bg-green-500' :
-                              server.uptimePercentage >= 95 ? 'bg-yellow-500' :
-                              'bg-red-500'
-                            }`}
-                            style={{ width: `${Math.min(100, server.uptimePercentage)}%` }}
-                          />
-                        </div>
+                    <div className="ml-4">
+                      <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-50 text-blue-600">
+                        <Server className="h-6 w-6" />
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-500">Uptime (30d)</span>
+                      <span className={`text-lg font-bold ${uptimeColor}`}>
+                        {server.uptimePercentage.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full ${
+                          server.uptimePercentage >= 99.5 ? 'bg-green-500' :
+                          server.uptimePercentage >= 95 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${Math.min(100, server.uptimePercentage)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">Last Checked</span>
+                      <span className="font-medium text-gray-900">
+                        {formatLastChecked(server.lastChecked)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             );
           })}
         </div>

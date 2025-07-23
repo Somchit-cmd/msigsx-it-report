@@ -21,8 +21,8 @@ export interface UptimeRecord {
   uptimePercentage: number;
   lastChecked: string;
   status: 'Online' | 'Offline' | 'Maintenance';
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: Timestamp | { toDate: () => Date };
+  updatedAt: Timestamp | { toDate: () => Date };
 }
 
 export interface DowntimeIncident {
@@ -199,8 +199,8 @@ export const uptimeService = {
     return updatedServers;
   },
 
-  // Create or update uptime record
-  async updateUptimeRecord(recordData: Omit<UptimeRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  // Create a new uptime record
+  async createUptimeRecord(recordData: Omit<UptimeRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     try {
       const now = Timestamp.now();
       const docRef = await addDoc(collection(db, UPTIME_COLLECTION), {
@@ -209,6 +209,24 @@ export const uptimeService = {
         updatedAt: now
       });
       return docRef.id;
+    } catch (error) {
+      console.error('Error creating uptime record:', error);
+      throw error;
+    }
+  },
+
+  // Update existing uptime record
+  async updateUptimeRecord(recordData: UptimeRecord): Promise<void> {
+    if (!recordData.id) {
+      throw new Error('Cannot update record without an ID');
+    }
+    try {
+      const now = Timestamp.now();
+      const docRef = doc(db, UPTIME_COLLECTION, recordData.id);
+      await updateDoc(docRef, {
+        ...recordData,
+        updatedAt: now
+      });
     } catch (error) {
       console.error('Error updating uptime record:', error);
       throw error;
