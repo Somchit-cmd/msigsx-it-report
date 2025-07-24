@@ -162,6 +162,7 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
           status: 'Online',
           uptimePercentage: 100,
           lastChecked: now.toISOString(),
+          currentMonthStart: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
           createdAt: { toDate: () => now },
           updatedAt: { toDate: () => now }
         };
@@ -188,6 +189,7 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
       toast({
         title: "Data Refreshed",
         description: `Server statuses have been updated at ${now.toLocaleTimeString()}.`,
+        duration: 3000,
       });
       
       console.log('Data refresh completed', {
@@ -202,6 +204,7 @@ const SystemUptime = ({ user }: SystemUptimeProps) => {
         title: "Refresh Failed",
         description: error instanceof Error ? error.message : "Failed to refresh uptime data. Please try again.",
         variant: "destructive",
+        duration: 3000,
       });
     } finally {
       setRefreshing(false);

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -16,7 +16,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, FileSpreadsheet, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Download,
+  FileSpreadsheet,
+  Trash2,
+} from "lucide-react";
 import { WorkTicket } from "@/services/helpdeskService";
 import { Timestamp } from "firebase/firestore";
 import EditTicketDialog from "./EditTicketDialog";
@@ -31,6 +39,8 @@ interface TicketsTableProps {
   onDeleteTicket: (id: string) => Promise<void>;
 }
 
+const ROWS_PER_PAGE = 10;
+
 import ConfirmDialog from "./ConfirmDialog";
 
 const TicketsTable = ({
@@ -43,23 +53,117 @@ const TicketsTable = ({
   const [selectedTicketId, setSelectedTicketId] = React.useState<string | null>(
     null
   );
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(tickets.length / ROWS_PER_PAGE);
+
+  const paginatedTickets = useMemo(() => {
+    const startIndex = (currentPage - 1) * ROWS_PER_PAGE;
+    const endIndex = startIndex + ROWS_PER_PAGE;
+    return tickets.slice(startIndex, endIndex);
+  }, [tickets, currentPage]);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
 
   const handleDeleteClick = (ticketId: string) => {
     setSelectedTicketId(ticketId);
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (selectedTicketId) {
-      onDeleteTicket(selectedTicketId);
+      await onDeleteTicket(selectedTicketId);
+      setDeleteDialogOpen(false);
+      // Reset to previous page if we're on the last page and it becomes empty
+      if (paginatedTickets.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      }
     }
-    setDeleteDialogOpen(false);
-    setSelectedTicketId(null);
   };
 
   const handleDeleteCancel = () => {
     setDeleteDialogOpen(false);
     setSelectedTicketId(null);
+  };
+
+  const renderPagination = () => {
+    if (tickets.length <= ROWS_PER_PAGE) return null;
+
+    return (
+      <div className="flex items-center justify-between px-4 py-3 border-t">
+        <div className="text-sm text-muted-foreground">
+          Showing{" "}
+          {Math.min((currentPage - 1) * ROWS_PER_PAGE + 1, tickets.length)}-
+          {Math.min(currentPage * ROWS_PER_PAGE, tickets.length)} of{" "}
+          {tickets.length} tickets
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(1)}
+            disabled={currentPage === 1}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => goToPage(pageNum)}
+                  className="h-8 w-8 p-0"
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   const getPriorityColor = (priority: string) => {
@@ -240,17 +344,17 @@ const TicketsTable = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tickets.length === 0 ? (
+            {paginatedTickets.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={10}
+                  colSpan={11}
                   className="text-center py-8 text-gray-500"
                 >
                   No tickets found
                 </TableCell>
               </TableRow>
             ) : (
-              tickets.map((ticket) => (
+              paginatedTickets.map((ticket) => (
                 <TableRow key={ticket.id}>
                   <TableCell className="font-medium">
                     <div>
@@ -276,11 +380,11 @@ const TicketsTable = ({
                     <div className="max-w-[200px]">
                       <div
                         className="text-sm font-medium leading-tight line-clamp-2"
-                        style={{ 
-                          display: '-webkit-box',
+                        style={{
+                          display: "-webkit-box",
                           WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden'
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
                         }}
                         title={ticket.specificIssue}
                       >
@@ -292,11 +396,11 @@ const TicketsTable = ({
                     <div className="max-w-[200px]">
                       <div
                         className="text-sm leading-tight line-clamp-2"
-                        style={{ 
-                          display: '-webkit-box',
+                        style={{
+                          display: "-webkit-box",
                           WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden'
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
                         }}
                         title={ticket.resolutionAction}
                       >
@@ -363,6 +467,7 @@ const TicketsTable = ({
             )}
           </TableBody>
         </Table>
+        {renderPagination()}
       </div>
     </div>
   );

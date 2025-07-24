@@ -337,7 +337,7 @@ const IncidentsReportTab = ({ incidents, servers }: IncidentsReportTabProps) => 
               critical: { label: "Critical", color: "#ef4444" },
               high: { label: "High", color: "#f97316" },
             }}
-            className="h-[300px]"
+            className="h-[300px] w-full"
           >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={reportData.timeSeriesData}>
@@ -449,34 +449,6 @@ const IncidentsReportTab = ({ incidents, servers }: IncidentsReportTabProps) => 
           </CardContent>
         </Card>
       </div>
-
-      {/* Server Uptime Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Current Server Uptime Status
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {servers.map((server) => (
-              <div key={server.id} className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{server.serverName}</span>
-                  <Badge variant={server.uptimePercentage >= 99 ? 'default' : 'destructive'}>
-                    {server.uptimePercentage}%
-                  </Badge>
-                </div>
-                <Progress 
-                  value={server.uptimePercentage} 
-                  className="h-2"
-                />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Recent Incidents Summary */}
       <Card>

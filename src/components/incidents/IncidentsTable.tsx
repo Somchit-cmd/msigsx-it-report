@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, FileSpreadsheet, Server, Clock, Trash2 } from 'lucide-react';
+import { Download, FileSpreadsheet, Server, Clock, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { DowntimeIncident } from '@/services/uptimeService';
 import EditIncidentDialog from './EditIncidentDialog';
 import ConfirmDialog from '../tickets/ConfirmDialog';
@@ -14,10 +14,25 @@ interface IncidentsTableProps {
   onDeleteIncident: (incidentId: string) => Promise<void>;
 }
 
+const ROWS_PER_PAGE = 10;
+
 const IncidentsTable = ({ incidents, onEditIncident, onDeleteIncident }: IncidentsTableProps) => {
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [incidentToDelete, setIncidentToDelete] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(incidents.length / ROWS_PER_PAGE);
+
+  const paginatedIncidents = useMemo(() => {
+    const startIndex = (currentPage - 1) * ROWS_PER_PAGE;
+    const endIndex = startIndex + ROWS_PER_PAGE;
+    return incidents.slice(startIndex, endIndex);
+  }, [incidents, currentPage]);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
   const getImpactColor = (impact: string) => {
     switch (impact) {
       case 'Critical': return 'bg-red-500 text-white';
@@ -143,6 +158,10 @@ const IncidentsTable = ({ incidents, onEditIncident, onDeleteIncident }: Inciden
     if (incidentToDelete) {
       try {
         await onDeleteIncident(incidentToDelete);
+        // Reset to previous page if we're on the last page and it becomes empty
+        if (paginatedIncidents.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
         toast({
           title: "Incident Deleted",
           description: "The incident has been deleted successfully.",
@@ -164,6 +183,83 @@ const IncidentsTable = ({ incidents, onEditIncident, onDeleteIncident }: Inciden
   const handleDeleteCancel = () => {
     setDeleteDialogOpen(false);
     setIncidentToDelete(null);
+  };
+
+  const renderPagination = () => {
+    if (incidents.length <= ROWS_PER_PAGE) return null;
+
+    return (
+      <div className="flex items-center justify-between px-4 py-3 border-t">
+        <div className="text-sm text-muted-foreground">
+          Showing {Math.min((currentPage - 1) * ROWS_PER_PAGE + 1, incidents.length)}-
+          {Math.min(currentPage * ROWS_PER_PAGE, incidents.length)} of {incidents.length} incidents
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(1)}
+            disabled={currentPage === 1}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => goToPage(pageNum)}
+                  className="h-8 w-8 p-0"
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -197,7 +293,7 @@ const IncidentsTable = ({ incidents, onEditIncident, onDeleteIncident }: Inciden
             </TableRow>
           </TableHeader>
           <TableBody>
-            {incidents.length === 0 ? (
+            {paginatedIncidents.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={9}
@@ -207,7 +303,7 @@ const IncidentsTable = ({ incidents, onEditIncident, onDeleteIncident }: Inciden
                 </TableCell>
               </TableRow>
             ) : (
-              incidents.map((incident) => (
+              paginatedIncidents.map((incident) => (
                 <TableRow key={incident.id}>
                   <TableCell className="font-medium">
                     <div>
@@ -296,6 +392,7 @@ const IncidentsTable = ({ incidents, onEditIncident, onDeleteIncident }: Inciden
             )}
           </TableBody>
         </Table>
+        {renderPagination()}
       </div>
       
       <ConfirmDialog
