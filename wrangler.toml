@@ -1,0 +1,9 @@
+name = "msigsx-it-report"
+
+[build]
+command = "npm ci && npm run build"
+cwd = "."
+publish = "dist"
+
+[build.environment_variables]
+NODE_VERSION = "18"
